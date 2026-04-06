@@ -1,12 +1,12 @@
-import { useEffect,useState } from 'react'
-
+import { useEffect, useState } from "react";
 
 function App() {
-  const [plant, setPlant] = useState([]);
+  const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPlants, setSelectedPlants] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:8000/plants')
+    fetch("http://localhost:8000/plants")
       .then((res) => {
         if (!res.ok) {
           throw new Error(`HTTP error: ${res.status}`);
@@ -15,58 +15,190 @@ function App() {
       })
       .then((data) => {
         console.log("Plants loaded:", data);
-        setPlant(data);
+        setPlants(data);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Error fetching plant data:', err);
+      .catch((err) => {
+        console.error("Error fetching plant data:", err);
         setLoading(false);
       });
   }, []);
- 
+
+  const handleAddToPalette = (plant) => {
+    const alreadySelected = selectedPlants.some((p) => p.id === plant.id);
+    if (!alreadySelected) {
+      setSelectedPlants([...selectedPlants, plant]);
+    }
+  };
+
+  const handleRemoveFromPalette = (plantId) => {
+    setSelectedPlants(selectedPlants.filter((plant) => plant.id !== plantId));
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
-      <div className='mx-auto max-w-6xl'>
-        <h1 className='text-3xl font-bold'>Plante Palette Tool</h1>
-        <p className='mt-2 text-sm text-gray-600'>
-          Version 1 mock plant results
-        </p>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <div className="mx-auto max-w-7xl p-6">
+        <header className="mb-6">
+          <h1 className="text-3xl font-bold">Plant Palette Tool</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Version 1 – Filter / Results / Palette layout
+          </p>
+        </header>
 
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Left Panel */}
+          <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-3">
+            <h2 className="text-lg font-semibold">Filters</h2>
 
-
-
-
-        {loading ? (
-          <p className='mt-6 text-gray-500'>Loading plant ...</p>
-        ) : (
-          <div className='mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-            {plant.map((plant) => (
-              <div
-                key={plant.id}
-                className='overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm'
-              >
-                <img
-                  src={plant.image_url}
-                  alt={plant.common_name}
-                  className='h-40 w-full object-cover'
-                />
-                <div className='p-4'>
-                  <h3 className='text-lg font-semibold'>{plant.common_name}</h3>
-                  <p className='text-sm italic text-gray-500'>
-                    {plant.botanical_name}
-                  </p>
-
-                  <div className='mt-3 space-y-1 text-sm text-gray-700'>
-                    <p>Type: {plant.plant_type}</p>
-                    <p>Flower Color:{plant.flower_color}</p>
-                    <p>Height:{plant.height}</p>
-                  </div>
-                </div>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  HOA
+                </label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                  <option>All Communities</option>
+                  <option>HOA A</option>
+                  <option>HOA B</option>
+                </select>
               </div>
-            ))}
-          </div>
-        )}
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Plant Type
+                </label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                  <option>All Types</option>
+                  <option>Shrub</option>
+                  <option>Tree</option>
+                  <option>Succulent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Flower Color
+                </label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                  <option>All Colors</option>
+                  <option>Red</option>
+                  <option>Yellow</option>
+                  <option>Purple</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Bloom Season
+                </label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                  <option>All Seasons</option>
+                  <option>Spring</option>
+                  <option>Summer</option>
+                  <option>Fall</option>
+                </select>
+              </div>
+            </div>
+          </aside>
+
+          {/* Middle Panel */}
+          <main className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Plant Results</h2>
+              <p className="text-sm text-gray-500">
+                {loading ? "Loading..." : `${plants.length} plants`}
+              </p>
+            </div>
+
+            {loading ? (
+              <p className="text-gray-500">Loading plant results...</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {plants.map((plant) => (
+                  <div
+                    key={plant.id}
+                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                  >
+                    <img
+                      src={plant.image_url}
+                      alt={plant.common_name}
+                      className="h-40 w-full object-cover"
+                    />
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold">
+                        {plant.common_name}
+                      </h3>
+                      <p className="text-sm italic text-gray-500">
+                        {plant.botanical_name}
+                      </p>
+
+                      <div className="mt-3 space-y-1 text-sm text-gray-700">
+                        <p>Type: {plant.plant_type}</p>
+                        <p>Flower Color: {plant.flower_color}</p>
+                        <p>Height: {plant.height}</p>
+                      </div>
+
+                      <button
+                        onClick={() => handleAddToPalette(plant)}
+                        className="mt-4 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                      >
+                        Add to Palette
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </main>
+
+          {/* Right Panel */}
+          <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-3">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Palette</h2>
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">
+                {selectedPlants.length} selected
+              </span>
+            </div>
+
+            {selectedPlants.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No plants selected yet.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {selectedPlants.map((plant) => (
+                  <div
+                    key={plant.id}
+                    className="flex items-start gap-3 rounded-xl border border-gray-200 p-3"
+                  >
+                    <img
+                      src={plant.image_url}
+                      alt={plant.common_name}
+                      className="h-16 w-16 rounded-lg object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{plant.common_name}</p>
+                      <p className="text-xs italic text-gray-500">
+                        {plant.botanical_name}
+                      </p>
+                      <button
+                        onClick={() => handleRemoveFromPalette(plant.id)}
+                        className="mt-2 text-sm text-red-600 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              className="mt-6 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black"
+            >
+              Generate Board
+            </button>
+          </aside>
+        </div>
       </div>
     </div>
   );
