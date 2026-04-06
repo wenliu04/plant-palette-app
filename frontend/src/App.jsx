@@ -1,9 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo,useState } from "react";
 
 function App() {
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlants, setSelectedPlants] = useState([]);
+
+  const [filters, setFilters] = useState({
+    hoa: "",
+    plantType: "",
+    flowerColor: "",
+    bloomSeason: "",
+  });
 
   useEffect(() => {
     fetch("http://localhost:8000/plants")
@@ -35,6 +42,24 @@ function App() {
     setSelectedPlants(selectedPlants.filter((plant) => plant.id !== plantId));
   };
 
+   const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+  const filteredPlants = useMemo(() => {
+    return plants.filter((plant) => {
+      const matchesHoa = !filters.hoa || plant.hoa === filters.hoa;
+      const matchesType =
+        !filters.plantType || plant.plant_type === filters.plantType;
+      const matchesColor =
+        !filters.flowerColor || plant.flower_color === filters.flowerColor;
+
+      return matchesHoa && matchesType && matchesColor;
+    });
+  }, [plants, filters]);
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <div className="mx-auto max-w-7xl p-6">
@@ -55,8 +80,13 @@ function App() {
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   HOA
                 </label>
-                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option>All Communities</option>
+                <select
+                value={filters.hoa}
+                  onChange={(e) =>
+                    handleFilterChange("hoa", e.target.value)
+                  }
+                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">All Communities</option>
                   <option>HOA A</option>
                   <option>HOA B</option>
                 </select>
@@ -66,8 +96,13 @@ function App() {
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Plant Type
                 </label>
-                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option>All Types</option>
+                <select 
+                  value={filters.plantType}
+                  onChange={(e) =>
+                    handleFilterChange("plantType", e.target.value)
+                  }
+                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">All Types</option>
                   <option>Shrub</option>
                   <option>Tree</option>
                   <option>Succulent</option>
@@ -78,8 +113,13 @@ function App() {
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Flower Color
                 </label>
-                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option>All Colors</option>
+                <select
+                value={filters.flowerColor}
+                  onChange={(e) =>
+                    handleFilterChange("flowerColor", e.target.value)
+                  }
+                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">All Colors</option>
                   <option>Red</option>
                   <option>Yellow</option>
                   <option>Purple</option>
@@ -90,8 +130,13 @@ function App() {
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Bloom Season
                 </label>
-                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option>All Seasons</option>
+                <select 
+                value={filters.bloomSeason}
+                  onChange={(e) =>
+                    handleFilterChange("bloomSeason", e.target.value)
+                  }
+                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">All Seasons</option>
                   <option>Spring</option>
                   <option>Summer</option>
                   <option>Fall</option>
@@ -105,7 +150,7 @@ function App() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Plant Results</h2>
               <p className="text-sm text-gray-500">
-                {loading ? "Loading..." : `${plants.length} plants`}
+                {loading ? "Loading..." : `${filteredPlants.length} plants`}
               </p>
             </div>
 
@@ -113,7 +158,7 @@ function App() {
               <p className="text-gray-500">Loading plant results...</p>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {plants.map((plant) => (
+                {filteredPlants.map((plant) => (
                   <div
                     key={plant.id}
                     className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
