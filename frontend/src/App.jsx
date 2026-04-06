@@ -48,6 +48,24 @@ function App() {
       [field]: value,
     }));
   };
+
+  const hoaOptions = useMemo(() => {
+  return [...new Set(plants.map((plant) => plant.hoa).filter(Boolean))];
+}, [plants]);
+
+  const plantTypeOptions = useMemo(() => {
+    return [...new Set(plants.map((plant) => plant.plant_type).filter(Boolean))];
+  }, [plants]);
+
+  const flowerColorOptions = useMemo(() => {
+    return [...new Set(plants.map((plant) => plant.flower_color).filter(Boolean))];
+  }, [plants]);
+
+  const bloomSeasonOptions = useMemo(() => {
+    return [...new Set(plants.map((plant) => plant.bloom_season).filter(Boolean))];
+  }, [plants]);
+
+
   const filteredPlants = useMemo(() => {
     return plants.filter((plant) => {
       const matchesHoa = !filters.hoa || plant.hoa === filters.hoa;
@@ -87,8 +105,11 @@ function App() {
                   }
                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                   <option value="">All Communities</option>
-                  <option>HOA A</option>
-                  <option>HOA B</option>
+                  {hoaOptions.map((hoa) => (
+                    <option key={hoa} value={hoa}>
+                    {hoa}
+                  </option>
+                  ))}
                 </select>
               </div>
 
@@ -103,9 +124,11 @@ function App() {
                   }
                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                   <option value="">All Types</option>
-                  <option>Shrub</option>
-                  <option>Tree</option>
-                  <option>Succulent</option>
+                  {plantTypeOptions.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -120,9 +143,11 @@ function App() {
                   }
                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                   <option value="">All Colors</option>
-                  <option>Red</option>
-                  <option>Yellow</option>
-                  <option>Purple</option>
+                  「{flowerColorOptions.map((color) => (
+                      <option key={color} value={color}>
+                        {color}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -137,9 +162,11 @@ function App() {
                   }
                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                   <option value="">All Seasons</option>
-                  <option>Spring</option>
-                  <option>Summer</option>
-                  <option>Fall</option>
+                  {bloomSeasonOptions.map((season) => (
+                    <option key={season} value={season}>
+                      {season}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
