@@ -30,9 +30,12 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const API_BASE = "https://plant-palette-app.onrender.com"
         const [plantsRes, hoaRes] = await Promise.all([
-          fetch("http://localhost:8000/plants"),
-          fetch("http://localhost:8000/hoas")
+          // fetch("http://localhost:8000/plants"),
+          // fetch("http://localhost:8000/hoas"),
+          fetch(`${API_BASE}/plants`),
+          fetch(`${API_BASE}/hoas`)
         ]);
 
         if (!plantsRes.ok ) {
