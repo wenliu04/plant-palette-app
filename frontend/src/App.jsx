@@ -1,82 +1,174 @@
 import { useEffect, useMemo,useState } from "react";
+import FilterPanel from "./components/FilterPanel";
+import ResultsPanel from "./components/ResultsPanel";
+import PalettePanel from "./components/PalettePanel";
 
 function App() {
+  // 植物原始数据 / Raw plant data from backend
   const [plants, setPlants] = useState([]);
+
+  // 页面加载状态 / Loading state for initial fetch
   const [loading, setLoading] = useState(true);
+
+  // 用户加入 palette 的植物 / Plants selected by user for the palette
   const [selectedPlants, setSelectedPlants] = useState([]);
 
+  // HOA 列表 / List of HOAs from backend
+  const [hoaLists, setHoaLists] = useState([]);
+
+  // 用户选的 HOA / Currently selected HOA filter
+  const [selectedHoa, setSelectedHoa] = useState("");
+
+  // 当前筛选条件 / Current filter values
   const [filters, setFilters] = useState({
-    hoa: "",
     plantType: "",
     flowerColor: "",
     bloomSeason: "",
   });
-
+  // 页面加载时从后端获取植物数据和 HOA 数据
+  // Fetch plant data + HOA data from backend when page first loads
   useEffect(() => {
-    fetch("http://localhost:8000/plants")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP error: ${res.status}`);
+    const fetchData = async () => {
+      try {
+        const [plantsRes, hoaRes] = await Promise.all([
+          fetch("http://localhost:8000/plants"),
+          fetch("http://localhost:8000/hoas")
+        ]);
+
+        if (!plantsRes.ok ) {
+          throw new Error("Failed to fetch plant data");
         }
-        return res.json();
-      })
-      .then((data) => {
-        console.log("Plants loaded:", data);
-        setPlants(data);
+        if (!hoaRes.ok) {
+          throw new Error("Failed to fetch HOA data");
+        }
+
+        const plantsData = await plantsRes.json();
+        const hoaData = await hoaRes.json();
+
+        console.log("Plants loaded:", plantsData);
+        console.log("HOAs loaded:", hoaData);
+
+        setPlants(plantsData);
+        setHoaLists(hoaData);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching plant data:", err);
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchData();
   }, []);
 
+
+  // 加入 palette，避免重复加入
+  // Add plant to palette, avoid duplicates
   const handleAddToPalette = (plant) => {
     const alreadySelected = selectedPlants.some((p) => p.id === plant.id);
     if (!alreadySelected) {
       setSelectedPlants([...selectedPlants, plant]);
     }
   };
-
+  // 从 palette 中移除植物
+  // Remove a plant from the palette
   const handleRemoveFromPalette = (plantId) => {
     setSelectedPlants(selectedPlants.filter((plant) => plant.id !== plantId));
   };
-
+  // 更新某一个筛选条件
+  // Update one specific filter field
    const handleFilterChange = (field, value) => {
     setFilters((prev) => ({
       ...prev,
       [field]: value,
     }));
   };
-
+  // 动态生成 HOA 下拉选项（取 HOA 名称，不是 approvedPlantIds）
+  // Generate HOA dropdown options from HOA names
   const hoaOptions = useMemo(() => {
-  return [...new Set(plants.map((plant) => plant.hoa).filter(Boolean))];
-}, [plants]);
-
+  return [...new Set(hoaLists.map((hoaList) => hoaList.name).filter(Boolean))];
+  }, [hoaLists]);
+  // 动态生成 Plant Type 下拉选项（去重）
+  // Dynamically generate unique plant type options
   const plantTypeOptions = useMemo(() => {
     return [...new Set(plants.map((plant) => plant.plant_type).filter(Boolean))];
   }, [plants]);
 
+  // 动态生成 Flower Color 下拉选项（兼容 string / array）
   const flowerColorOptions = useMemo(() => {
-    return [...new Set(plants.map((plant) => plant.flower_color).filter(Boolean))];
+    return [
+      ...new Set(
+        plants
+          .flatMap((plant) => {
+            if (Array.isArray(plant.flower_color)) return plant.flower_color;
+            if (plant.flower_color) return [plant.flower_color];
+            return [];
+          })
+          .filter(Boolean)
+      ),
+    ];
   }, [plants]);
-
+  // 动态生成 Bloom Season 下拉选项（去重）
+  // bloom_season 现在是数组，例如 ["spring", "summer"]
+  // We flatten bloom_season arrays first, then deduplicate them
   const bloomSeasonOptions = useMemo(() => {
-    return [...new Set(plants.map((plant) => plant.bloom_season).filter(Boolean))];
+    return [...new Set(
+      plants
+      .flatMap((plant) => plant.bloom_season||[]) // flatten bloom_season arrays, handle undefined
+      .filter(Boolean))];
   }, [plants]);
 
+  // 当前选中的 HOA 对象
+  const selectedHoaObj = useMemo(() => {
+    return hoaLists.find((hoaList) => hoaList.name === selectedHoa) || null;
+  }, [hoaLists, selectedHoa]);
 
+  // 先按 HOA 缩小范围，再按其他条件过滤
+  // HOA is the first-level filter: if user selected an HOA, we only consider plants approved by that HOA
   const filteredPlants = useMemo(() => {
     return plants.filter((plant) => {
-      const matchesHoa = !filters.hoa || plant.hoa === filters.hoa;
+      // HOA 精确匹配；如果用户选了 HOA，就看这个植物的 ID 是否在对应 HOA 的 approvedPlantIds 里
+      // Exact HOA match: if user selected an HOA, check if plant ID is in that HOA's approvedPlantIds
+      const plantName = plant.common_name || plant.commonName || "";
+      const matchesHoa = selectedHoaObj
+        ? selectedHoaObj.approvedPlantNames.includes(plantName)
+        : true;
+      // 植物类型精确匹配
+      // Exact plant type match
       const matchesType =
         !filters.plantType || plant.plant_type === filters.plantType;
-      const matchesColor =
-        !filters.flowerColor || plant.flower_color === filters.flowerColor;
+      // 花色匹配：兼容 string / array
+      const flowerColors = Array.isArray(plant.flower_color)
+        ? plant.flower_color
+        : plant.flower_color
+        ? [plant.flower_color]
+        : [];
 
-      return matchesHoa && matchesType && matchesColor;
+        const matchesColor =
+        !filters.flowerColor || flowerColors.includes(filters.flowerColor);
+
+      // 花期匹配：plant.bloom_season 是数组
+      // 例如 ["spring", "summer"]，如果用户选 spring，也算匹配
+      // Bloom season match: bloom_season is an array, so we check inclusion
+      const matchesBloom =
+        !filters.bloomSeason ||
+         (plant.bloom_season || []).includes(filters.bloomSeason);
+
+      // 所有条件都满足才显示
+      // Plant must satisfy all active filters
+      return matchesHoa && matchesType && matchesColor && matchesBloom;
     });
-  }, [plants, filters]);
+  }, [plants,selectedHoaObj,filters]);
+
+  // 仅用于显示，把 red -> Red, full_sun -> Full Sun
+  // UI display helper only, does not affect filtering logic
+  const formatLabel = (value) => {
+    if (!value) return "";
+
+    return value
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -89,187 +181,28 @@ function App() {
         </header>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* Left Panel */}
-          <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-3">
-            <h2 className="text-lg font-semibold">Filters</h2>
+          <FilterPanel
+          selectedHoa={selectedHoa}
+          setSelectedHoa={setSelectedHoa}
+          filters={filters}
+          handleFilterChange={handleFilterChange}
+          hoaOptions={hoaOptions}
+          plantTypeOptions={plantTypeOptions}
+          flowerColorOptions={flowerColorOptions}
+          bloomSeasonOptions={bloomSeasonOptions}
+          formatLabel={formatLabel}
+        />
+        <ResultsPanel
+          loading={loading}
+          filteredPlants={filteredPlants}
+          handleAddToPalette={handleAddToPalette}
+          formatLabel={formatLabel}
+        />
 
-            <div className="mt-4 space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  HOA
-                </label>
-                <select
-                value={filters.hoa}
-                  onChange={(e) =>
-                    handleFilterChange("hoa", e.target.value)
-                  }
-                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">All Communities</option>
-                  {hoaOptions.map((hoa) => (
-                    <option key={hoa} value={hoa}>
-                    {hoa}
-                  </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Plant Type
-                </label>
-                <select 
-                  value={filters.plantType}
-                  onChange={(e) =>
-                    handleFilterChange("plantType", e.target.value)
-                  }
-                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">All Types</option>
-                  {plantTypeOptions.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Flower Color
-                </label>
-                <select
-                value={filters.flowerColor}
-                  onChange={(e) =>
-                    handleFilterChange("flowerColor", e.target.value)
-                  }
-                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">All Colors</option>
-                  「{flowerColorOptions.map((color) => (
-                      <option key={color} value={color}>
-                        {color}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Bloom Season
-                </label>
-                <select 
-                value={filters.bloomSeason}
-                  onChange={(e) =>
-                    handleFilterChange("bloomSeason", e.target.value)
-                  }
-                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">All Seasons</option>
-                  {bloomSeasonOptions.map((season) => (
-                    <option key={season} value={season}>
-                      {season}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </aside>
-
-          {/* Middle Panel */}
-          <main className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Plant Results</h2>
-              <p className="text-sm text-gray-500">
-                {loading ? "Loading..." : `${filteredPlants.length} plants`}
-              </p>
-            </div>
-
-            {loading ? (
-              <p className="text-gray-500">Loading plant results...</p>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {filteredPlants.map((plant) => (
-                  <div
-                    key={plant.id}
-                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-                  >
-                    <img
-                      src={plant.image_url}
-                      alt={plant.common_name}
-                      className="h-40 w-full object-cover"
-                    />
-                    <div className="p-4">
-                      <h3 className="text-lg font-semibold">
-                        {plant.common_name}
-                      </h3>
-                      <p className="text-sm italic text-gray-500">
-                        {plant.botanical_name}
-                      </p>
-
-                      <div className="mt-3 space-y-1 text-sm text-gray-700">
-                        <p>Type: {plant.plant_type}</p>
-                        <p>Flower Color: {plant.flower_color}</p>
-                        <p>Height: {plant.height}</p>
-                      </div>
-
-                      <button
-                        onClick={() => handleAddToPalette(plant)}
-                        className="mt-4 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                      >
-                        Add to Palette
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </main>
-
-          {/* Right Panel */}
-          <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-3">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Palette</h2>
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">
-                {selectedPlants.length} selected
-              </span>
-            </div>
-
-            {selectedPlants.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No plants selected yet.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {selectedPlants.map((plant) => (
-                  <div
-                    key={plant.id}
-                    className="flex items-start gap-3 rounded-xl border border-gray-200 p-3"
-                  >
-                    <img
-                      src={plant.image_url}
-                      alt={plant.common_name}
-                      className="h-16 w-16 rounded-lg object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{plant.common_name}</p>
-                      <p className="text-xs italic text-gray-500">
-                        {plant.botanical_name}
-                      </p>
-                      <button
-                        onClick={() => handleRemoveFromPalette(plant.id)}
-                        className="mt-2 text-sm text-red-600 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button
-              className="mt-6 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black"
-            >
-              Generate Board
-            </button>
-          </aside>
+        <PalettePanel
+          selectedPlants={selectedPlants}
+          handleRemoveFromPalette={handleRemoveFromPalette}
+        />
         </div>
       </div>
     </div>
