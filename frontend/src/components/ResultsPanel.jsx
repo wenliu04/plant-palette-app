@@ -4,6 +4,8 @@ function ResultsPanel({
   handleAddToPalette,
   formatLabel,
 }) {
+    //根据 bloom season 返回对应的标签颜色
+    // Return corresponding tag color based on bloom season
     const getSeasonTagClass = (season) => {
     switch (season) {
       case "Spring":
