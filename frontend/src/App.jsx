@@ -11,7 +11,10 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   // 用户加入 palette 的植物 / Plants selected by user for the palette
-  const [selectedPlants, setSelectedPlants] = useState([]);
+  const [selectedPlants, setSelectedPlants] = useState(() => {
+  const saved = localStorage.getItem("paletteBoard");
+  return saved ? JSON.parse(saved) : [];
+  });
 
   // HOA 列表 / List of HOAs from backend
   const [hoaLists, setHoaLists] = useState([]);
@@ -30,7 +33,8 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const API_BASE = import.meta.env.VITE_API_BASE_URL;
+        const API_BASE = "http://localhost:8000"  ||
+        import.meta.env.VITE_API_BASE_URL ||"http://localhost:8000";
         const [plantsRes, hoaRes] = await Promise.all([
           // fetch("http://localhost:8000/plants"),
           // fetch("http://localhost:8000/hoas"),
@@ -67,16 +71,24 @@ function App() {
   // 加入 palette，避免重复加入
   // Add plant to palette, avoid duplicates
   const handleAddToPalette = (plant) => {
-    const alreadySelected = selectedPlants.some((p) => p.id === plant.id);
-    if (!alreadySelected) {
-      setSelectedPlants([...selectedPlants, plant]);
-    }
-  };
+  setSelectedPlants((prev) => {
+    const alreadySelected = prev.some((p) => p.id === plant.id);
+    if (alreadySelected) return prev;
+
+    const updated = [...prev, plant];
+    localStorage.setItem("paletteBoard", JSON.stringify(updated));
+    return updated;
+  });
+};
   // 从 palette 中移除植物
   // Remove a plant from the palette
   const handleRemoveFromPalette = (plantId) => {
-    setSelectedPlants(selectedPlants.filter((plant) => plant.id !== plantId));
-  };
+  setSelectedPlants((prev) => {
+    const updated = prev.filter((plant) => plant.id !== plantId);
+    localStorage.setItem("paletteBoard", JSON.stringify(updated));
+    return updated;
+  });
+};
   // 更新某一个筛选条件
   // Update one specific filter field
    const handleFilterChange = (field, value) => {

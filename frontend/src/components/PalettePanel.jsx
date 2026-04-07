@@ -1,8 +1,16 @@
+import { useNavigate } from "react-router-dom";
+
 function PalettePanel({
   selectedPlants,
   handleRemoveFromPalette,
 }) {
+    const navigate = useNavigate();
+    const handleGenerateBoard = () => {
+    localStorage.setItem("paletteBoard", JSON.stringify(selectedPlants));
+    navigate("/board");
+  };
   return (
+    
     <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-3">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Palette</h2>
@@ -44,7 +52,10 @@ function PalettePanel({
         </div>
       )}
 
-      <button className="mt-6 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black">
+      <button 
+        onClick={handleGenerateBoard}
+        disabled={selectedPlants.length === 0}
+        className="mt-6 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black">
         Generate Board
       </button>
     </aside>
