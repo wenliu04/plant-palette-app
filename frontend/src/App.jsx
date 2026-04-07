@@ -30,7 +30,7 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const API_BASE = "https://plant-palette-app.onrender.com"
+        const API_BASE = import.meta.env.VITE_API_BASE_URL;
         const [plantsRes, hoaRes] = await Promise.all([
           // fetch("http://localhost:8000/plants"),
           // fetch("http://localhost:8000/hoas"),
