@@ -1,11 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
 
 app = FastAPI()
 # Allow CORS for all origins (you can restrict this in production)
 origins = [
     "*"
 ]
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,7 +31,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Spring", "Summer"],
-        "image_url": "https://via.placeholder.com/200x140?text=Red+Yucca",
+        "image_url": "http://localhost:8000/static/plants/red-yucca.jpg",
     },
     {
         "id": 2,
@@ -37,7 +43,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Summer", "Fall"],
-        "image_url": "https://via.placeholder.com/200x140?text=Lantana",
+        "image_url": "http://localhost:8000/static/plants/lantana.jpg",
     },
     {
         "id": 3,
@@ -49,7 +55,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Spring", "Summer"],
-        "image_url": "https://via.placeholder.com/200x140?text=Lavender",
+        "image_url": "http://localhost:8000/static/plants/lavender.jpg",
     },
     {
         "id": 4,
@@ -61,7 +67,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Summer", "Fall"],
-        "image_url": "https://via.placeholder.com/200x140?text=Texas+Sage",
+        "image_url": "http://localhost:8000/static/plants/texas-sage.jpg",
     },
     {
         "id": 5,
@@ -73,7 +79,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "medium",
         "bloom_season": ["Spring", "Summer", "Fall"],
-        "image_url": "https://via.placeholder.com/200x140?text=Bougainvillea",
+        "image_url": "http://localhost:8000/static/plants/bougainvillea.jpg",
     },
     {
         "id": 6,
@@ -85,7 +91,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "medium",
         "bloom_season": ["Spring", "Summer", "Fall"],
-        "image_url": "https://via.placeholder.com/200x140?text=Oleander",
+        "image_url": "http://localhost:8000/static/plants/oleander.jpg",
     },
     {
         "id": 7,
@@ -97,7 +103,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Summer"],
-        "image_url": "https://via.placeholder.com/200x140?text=Agave",
+        "image_url": "http://localhost:8000/static/plants/agave.jpg",
     },
     {
         "id": 8,
@@ -109,7 +115,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Winter", "Spring"],
-        "image_url": "https://via.placeholder.com/200x140?text=Aloe",
+        "image_url": "http://localhost:8000/static/plants/aloe-vera.jpg",
     },
     {
         "id": 9,
@@ -121,7 +127,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Fall"],
-        "image_url": "https://via.placeholder.com/200x140?text=Muhly",
+        "image_url": "http://localhost:8000/static/plants/pink-muhly-grass.jpg",
     },
     {
         "id": 10,
@@ -133,7 +139,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Fall"],
-        "image_url": "https://via.placeholder.com/200x140?text=Deer+Grass",
+        "image_url": "http://localhost:8000/static/plants/deer-grass.jpg",
     },
     {
         "id": 11,
@@ -145,7 +151,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Winter", "Spring"],
-        "image_url": "https://via.placeholder.com/200x140?text=Rosemary",
+        "image_url": "http://localhost:8000/static/plants/rosemary.jpg",
     },
     {
         "id": 12,
@@ -157,7 +163,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Spring", "Summer"],
-        "image_url": "https://via.placeholder.com/200x140?text=Ice+Plant",
+        "image_url": "http://localhost:8000/static/plants/ice-plant.jpg",
     },
     {
         "id": 13,
@@ -169,7 +175,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Spring", "Summer", "Fall"],
-        "image_url": "https://via.placeholder.com/200x140?text=Blackfoot+Daisy",
+        "image_url": "http://localhost:8000/static/plants/blackfoot-daisy.jpg",
     },
     {
         "id": 14,
@@ -181,7 +187,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "medium",
         "bloom_season": ["Summer", "Fall"],
-        "image_url": "https://via.placeholder.com/200x140?text=Bird+of+Paradise",
+        "image_url": "http://localhost:8000/static/plants/bird-of-paradise.jpg",
     },
     {
         "id": 15,
@@ -193,7 +199,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "medium",
         "bloom_season": ["Spring"],
-        "image_url": "https://via.placeholder.com/200x140?text=Hawthorn",
+        "image_url": "http://localhost:8000/static/plants/indian-hawthorn.jpg",
     },
 ]
 
