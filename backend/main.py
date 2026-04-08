@@ -7,9 +7,12 @@ from fastapi.staticfiles import StaticFiles
 
 
 app = FastAPI()
-# Allow CORS for all origins (you can restrict this in production)
+# Explicit CORS allowlist for local + Vercel deployments.
 origins = [
-    "*"
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://plant-palette-app-o2o6.vercel.app",
+    "https://plant-palette-app.vercel.app",
 ]
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -18,6 +21,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
