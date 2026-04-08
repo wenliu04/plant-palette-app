@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from urllib.parse import urljoin
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
@@ -31,7 +33,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Spring", "Summer"],
-        "image_url": "http://localhost:8000/static/plants/red-yucca.jpg",
+        "image_url": "/static/plants/red-yucca.jpg",
     },
     {
         "id": 2,
@@ -43,7 +45,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Summer", "Fall"],
-        "image_url": "http://localhost:8000/static/plants/lantana.jpg",
+        "image_url": "/static/plants/lantana.jpg",
     },
     {
         "id": 3,
@@ -55,7 +57,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Spring", "Summer"],
-        "image_url": "http://localhost:8000/static/plants/lavender.jpg",
+        "image_url": "/static/plants/lavender.jpg",
     },
     {
         "id": 4,
@@ -67,7 +69,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Summer", "Fall"],
-        "image_url": "http://localhost:8000/static/plants/texas-sage.jpg",
+        "image_url": "/static/plants/texas-sage.jpg",
     },
     {
         "id": 5,
@@ -79,7 +81,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "medium",
         "bloom_season": ["Spring", "Summer", "Fall"],
-        "image_url": "http://localhost:8000/static/plants/bougainvillea.jpg",
+        "image_url": "/static/plants/bougainvillea.jpg",
     },
     {
         "id": 6,
@@ -91,7 +93,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "medium",
         "bloom_season": ["Spring", "Summer", "Fall"],
-        "image_url": "http://localhost:8000/static/plants/oleander.jpg",
+        "image_url": "/static/plants/oleander.jpg",
     },
     {
         "id": 7,
@@ -103,7 +105,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Summer"],
-        "image_url": "http://localhost:8000/static/plants/agave.jpg",
+        "image_url": "/static/plants/agave.jpg",
     },
     {
         "id": 8,
@@ -115,7 +117,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Winter", "Spring"],
-        "image_url": "http://localhost:8000/static/plants/aloe-vera.jpg",
+        "image_url": "/static/plants/aloe-vera.jpg",
     },
     {
         "id": 9,
@@ -127,7 +129,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Fall"],
-        "image_url": "http://localhost:8000/static/plants/pink-muhly-grass.jpg",
+        "image_url": "/static/plants/pink-muhly-grass.jpg",
     },
     {
         "id": 10,
@@ -139,7 +141,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Fall"],
-        "image_url": "http://localhost:8000/static/plants/deer-grass.jpg",
+        "image_url": "/static/plants/deer-grass.jpg",
     },
     {
         "id": 11,
@@ -151,7 +153,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Winter", "Spring"],
-        "image_url": "http://localhost:8000/static/plants/rosemary.jpg",
+        "image_url": "/static/plants/rosemary.jpg",
     },
     {
         "id": 12,
@@ -163,7 +165,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Spring", "Summer"],
-        "image_url": "http://localhost:8000/static/plants/ice-plant.jpg",
+        "image_url": "/static/plants/ice-plant.jpg",
     },
     {
         "id": 13,
@@ -175,7 +177,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "low",
         "bloom_season": ["Spring", "Summer", "Fall"],
-        "image_url": "http://localhost:8000/static/plants/blackfoot-daisy.jpg",
+        "image_url": "/static/plants/blackfoot-daisy.jpg",
     },
     {
         "id": 14,
@@ -187,7 +189,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "medium",
         "bloom_season": ["Summer", "Fall"],
-        "image_url": "http://localhost:8000/static/plants/bird-of-paradise.jpg",
+        "image_url": "/static/plants/bird-of-paradise.jpg",
     },
     {
         "id": 15,
@@ -199,7 +201,7 @@ plants = [
         "sun_exposure": "full sun",
         "water_use": "medium",
         "bloom_season": ["Spring"],
-        "image_url": "http://localhost:8000/static/plants/indian-hawthorn.jpg",
+        "image_url": "/static/plants/indian-hawthorn.jpg",
     },
 ]
 
@@ -270,9 +272,22 @@ def read_root():
     return {"message": "Plant pallette backend is running!"}
 
 @app.get("/plants")
-def get_plants():
+def get_plants(request: Request):
     print(">>> /plants endpoint hit")
-    return plants
+    base_url = str(request.base_url)
+    normalized = []
+    for plant in plants:
+        image_url = plant.get("image_url")
+        if image_url and image_url.startswith("/"):
+            normalized.append(
+                {
+                    **plant,
+                    "image_url": urljoin(base_url, image_url.lstrip("/")),
+                }
+            )
+        else:
+            normalized.append(plant)
+    return normalized
 @app.get("/hoas")
 def get_hoa_lists():
     print(">>> /hoas endpoint hit")

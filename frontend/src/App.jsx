@@ -3,6 +3,24 @@ import FilterPanel from "./components/FilterPanel";
 import ResultsPanel from "./components/ResultsPanel";
 import PalettePanel from "./components/PalettePanel";
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const API_ORIGIN = (() => {
+  try {
+    return new URL(API_BASE).origin;
+  } catch {
+    return API_BASE;
+  }
+})();
+
+const resolveImageUrl = (url, apiOrigin = API_ORIGIN) => {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("/")) {
+    return `${apiOrigin}${url}`;
+  }
+  return url;
+};
+
 function App() {
   // 植物原始数据 / Raw plant data from backend
   const [plants, setPlants] = useState([]);
@@ -13,7 +31,16 @@ function App() {
   // 用户加入 palette 的植物 / Plants selected by user for the palette
   const [selectedPlants, setSelectedPlants] = useState(() => {
   const saved = localStorage.getItem("paletteBoard");
-  return saved ? JSON.parse(saved) : [];
+  if (!saved) return [];
+  try {
+    const parsed = JSON.parse(saved);
+    return parsed.map((plant) => ({
+      ...plant,
+      image_url: resolveImageUrl(plant.image_url),
+    }));
+  } catch {
+    return [];
+  }
   });
 
   // HOA 列表 / List of HOAs from backend
@@ -33,11 +60,7 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const API_BASE = "http://localhost:8000"  ||
-        import.meta.env.VITE_API_BASE_URL ||"http://localhost:8000";
         const [plantsRes, hoaRes] = await Promise.all([
-          // fetch("http://localhost:8000/plants"),
-          // fetch("http://localhost:8000/hoas"),
           fetch(`${API_BASE}/plants`),
           fetch(`${API_BASE}/hoas`)
         ]);
@@ -51,11 +74,17 @@ function App() {
 
         const plantsData = await plantsRes.json();
         const hoaData = await hoaRes.json();
+        const apiOrigin = new URL(plantsRes.url).origin;
 
         console.log("Plants loaded:", plantsData);
         console.log("HOAs loaded:", hoaData);
 
-        setPlants(plantsData);
+        const normalizedPlants = plantsData.map((plant) => ({
+          ...plant,
+          image_url: resolveImageUrl(plant.image_url, apiOrigin),
+        }));
+
+        setPlants(normalizedPlants);
         setHoaLists(hoaData);
       } catch (err) {
         console.error("Error fetching data:", err);

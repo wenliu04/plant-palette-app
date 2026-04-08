@@ -3,6 +3,26 @@ import { useNavigate } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
+const FALLBACK_IMAGE =
+  "https://via.placeholder.com/1000x1000?text=No+Image";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const API_ORIGIN = (() => {
+  try {
+    return new URL(API_BASE).origin;
+  } catch {
+    return API_BASE;
+  }
+})();
+
+const resolveImageUrl = (url) => {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("/")) {
+    return `${API_ORIGIN}${url}`;
+  }
+  return url;
+};
+
 function PaletteBoard() {
   // 存储当前 board 的植物列表
   // State to store plants in the palette board
@@ -17,7 +37,17 @@ function PaletteBoard() {
   useEffect(() => {
     const saved = localStorage.getItem("paletteBoard");
     if (saved) {
-      setBoardPlants(JSON.parse(saved));
+      try {
+        const parsed = JSON.parse(saved);
+        setBoardPlants(
+          parsed.map((plant) => ({
+            ...plant,
+            image_url: resolveImageUrl(plant.image_url),
+          }))
+        );
+      } catch {
+        setBoardPlants([]);
+      }
     }
   }, []);
 
@@ -44,43 +74,95 @@ function PaletteBoard() {
   // 导出 PDF
   // Export the palette board as a PDF
   const handleExportPDF = async () => {
-    const boardElement = document.getElementById("palette-board-export");
+    try {
+      const boardElement = document.getElementById("palette-board-export");
 
-    // 如果找不到元素就直接退出
-    // Exit if export container not found
-    if (!boardElement) return;
+      // 如果找不到元素就直接退出
+      // Exit if export container not found
+      if (!boardElement) return;
 
-    // 将页面区域转为 canvas
-    // Convert DOM element into canvas
-    const canvas = await html2canvas(boardElement, {
-      scale: 2, // 提高清晰度
-      useCORS: true, // 允许跨域图片
-      backgroundColor: "#f9fafb", // 背景颜色
-    });
+      // 将页面区域转为 canvas
+      // Convert DOM element into canvas
+      const canvas = await html2canvas(boardElement, {
+        scale: 2, // 提高清晰度 / improve sharpness
+        useCORS: true, // 尝试跨域图片加载 / try CORS image loading
+        backgroundColor: "#f9fafb",
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        windowWidth: boardElement.scrollWidth,
+      });
 
-    // 转为图片数据
-    // Convert canvas to image
-    const imgData = canvas.toDataURL("image/png");
+      // 转为图片数据
+      // Convert canvas to image
+      const imgData = canvas.toDataURL("image/png");
 
-    // 创建 PDF（A4尺寸）
-    // Create PDF document
-    const pdf = new jsPDF("p", "mm", "a4");
+      // 创建 PDF（A4尺寸）
+      // Create PDF document (A4)
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 10;
+      const contentWidth = pageWidth - margin * 2;
+      const contentHeight = pageHeight - margin * 2;
 
-    // PDF宽度（A4宽度）
-    // A4 width in mm
-    const pdfWidth = 210;
+      // 按比例计算渲染高度
+      // Compute proportional render height
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
 
-    // 按比例计算高度
-    // Calculate proportional height
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      // 支持多页：内容超过一页时自动分页
+      // Multi-page support: paginate when content exceeds one page
+      let heightLeft = imgHeight;
+      let positionY = margin;
 
-    // 将图片加入 PDF
-    // Add image to PDF
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, "PNG", margin, positionY, contentWidth, imgHeight);
+      heightLeft -= contentHeight;
 
-    // 下载 PDF
-    // Save/download PDF
-    pdf.save("palette-board.pdf");
+      while (heightLeft > 0) {
+        positionY = heightLeft - imgHeight + margin;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", margin, positionY, contentWidth, imgHeight);
+        heightLeft -= contentHeight;
+      }
+
+      // 下载 PDF
+      // Save/download PDF
+      pdf.save("palette-board.pdf");
+    } catch (error) {
+      // 如果图片跨域导致截图失败，降级为文本 PDF，保证仍可导出。
+      // Fallback to a text-only PDF if screenshot export fails (e.g., CORS images).
+      console.error("PDF export failed, fallback to text PDF:", error);
+
+      const fallbackPdf = new jsPDF("p", "mm", "a4");
+      let y = 16;
+
+      fallbackPdf.setFontSize(16);
+      fallbackPdf.text("Palette Board", 14, y);
+      y += 10;
+
+      fallbackPdf.setFontSize(11);
+      fallbackPdf.text(`Plants: ${boardPlants.length}`, 14, y);
+      y += 8;
+
+      if (boardPlants.length === 0) {
+        fallbackPdf.text("No plants in board.", 14, y);
+      } else {
+        boardPlants.forEach((plant, index) => {
+          if (y > 280) {
+            fallbackPdf.addPage();
+            y = 16;
+          }
+          fallbackPdf.text(`${index + 1}. ${plant.common_name || "Unknown"}`, 14, y);
+          y += 6;
+          fallbackPdf.text(`   Botanical: ${plant.botanical_name || "N/A"}`, 14, y);
+          y += 6;
+          fallbackPdf.text(`   Type: ${plant.plant_type || "N/A"} | Color: ${plant.flower_color || "N/A"} | Height: ${plant.height || "N/A"}`, 14, y);
+          y += 8;
+        });
+      }
+
+      fallbackPdf.save("palette-board.txt-fallback.pdf");
+      window.alert("图片版 PDF 导出失败，已为你导出文字版 PDF（可能是图片跨域限制）。");
+    }
   };
 
   return (
@@ -149,9 +231,13 @@ function PaletteBoard() {
                   {/* 图片 */}
                   {/* Plant image */}
                   <img
-                    src={plant.image_url}
+                    src={resolveImageUrl(plant.image_url)}
                     alt={plant.common_name}
-                    className="mb-3 h-48 w-full rounded-xl object-cover"
+                    className="mb-3 aspect-square w-full rounded-xl object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = FALLBACK_IMAGE;
+                    }}
                   />
 
                   {/* 名称 */}
