@@ -126,6 +126,11 @@ const parseImportedPlantNames = (text) => {
 };
 
 function App() {
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem("uiLanguage") || "en";
+  });
+  const isZh = language === "zh";
+
   // 植物原始数据 / Raw plant data from backend
   const [plants, setPlants] = useState([]);
 
@@ -221,6 +226,11 @@ function App() {
     } else {
       localStorage.removeItem("changelogSeenVersion");
     }
+  };
+
+  const handleLanguageChange = (value) => {
+    setLanguage(value);
+    localStorage.setItem("uiLanguage", value);
   };
 
 
@@ -537,6 +547,14 @@ function App() {
                   <li>Changelog popup now supports Do-not-show-again preference</li>
                 </ul>
               </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Version 2.3</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  <li>Language switcher in top-right: 🇺🇸 English / 🇨🇳 中文</li>
+                  <li>Homepage panels now support bilingual UI labels</li>
+                </ul>
+              </div>
             </div>
 
             <label className="mt-5 inline-flex items-center gap-2 text-sm text-gray-700">
@@ -554,14 +572,35 @@ function App() {
 
       <div className="mx-auto w-full max-w-[2200px] px-4 py-6 sm:px-6 xl:px-8 2xl:px-10">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold">Plant Palette Tool</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Version 2.2 – Smart Search / Import / Grouping / Drag & Sort
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">
+                {isZh ? "植物配置工具" : "Plant Palette Tool"}
+              </h1>
+              <p className="mt-2 text-sm text-gray-600">
+                {isZh
+                  ? "Version 2.3 – 智能搜索 / 导入 / 分组 / 拖拽排序 / 双语切换"
+                  : "Version 2.3 – Smart Search / Import / Grouping / Drag & Sort / Bilingual UI"}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">{isZh ? "语言" : "Language"}</span>
+              <select
+                value={language}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+              >
+                <option value="en">🇺🇸 English</option>
+                <option value="zh">🇨🇳 中文</option>
+              </select>
+            </div>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 2xl:gap-8">
           <FilterPanel
+          language={language}
           selectedHoa={selectedHoa}
           setSelectedHoa={setSelectedHoa}
           filters={filters}
@@ -577,6 +616,7 @@ function App() {
           formatLabel={formatLabel}
         />
         <ResultsPanel
+          language={language}
           loading={loading}
           filteredPlants={filteredPlants}
           handleAddToPalette={handleAddToPalette}
@@ -584,6 +624,7 @@ function App() {
         />
 
         <PalettePanel
+          language={language}
           selectedPlants={selectedPlants}
           handleRemoveFromPalette={handleRemoveFromPalette}
           handleRemoveAllFromPalette={handleRemoveAllFromPalette}

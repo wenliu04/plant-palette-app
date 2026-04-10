@@ -35,6 +35,7 @@ const groupPlantsByType = (plants) => {
 // 用于展示已选植物列表，并支持移除与生成展示板。
 // Displays selected plants, supports removing items, and generates a board view.
 function PalettePanel({
+  language,
   // 已选植物数组。
   // Array of currently selected plants.
   selectedPlants,
@@ -47,6 +48,7 @@ function PalettePanel({
   handleImportPlantFile,
   importStatus,
 }) {
+  const isZh = language === "zh";
   // React Router 导航函数，用于页面跳转。
   // Navigation helper from React Router for route transitions.
   const navigate = useNavigate();
@@ -88,17 +90,17 @@ function PalettePanel({
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            Group by Type
+            {isZh ? "按类型分组" : "Group by Type"}
           </button>
           <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">
-            {selectedPlants.length} selected
+            {selectedPlants.length} {isZh ? "已选择" : "selected"}
           </span>
         </div>
       </div>
 
       <div className="mb-3 grid grid-cols-2 gap-2">
         <label className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-          Import List
+          {isZh ? "导入清单" : "Import List"}
           <input
             type="file"
             accept=".txt,.csv,.json"
@@ -117,7 +119,7 @@ function PalettePanel({
           disabled={selectedPlants.length === 0}
           className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Remove All
+          {isZh ? "全部移除" : "Remove All"}
         </button>
       </div>
       {importStatus ? (
@@ -127,7 +129,7 @@ function PalettePanel({
       {/* 空状态：当未选择任何植物时显示 / Empty state: shown when no plant is selected */}
       {selectedPlants.length === 0 ? (
         <p className="text-sm text-gray-500">
-          No plants selected yet.
+          {isZh ? "还没有选择植物。" : "No plants selected yet."}
         </p>
       ) : (
         // 列表状态：逐项渲染已选植物卡片。
@@ -163,7 +165,7 @@ function PalettePanel({
                           onClick={() => handleRemoveFromPalette(plant.id)}
                           className="mt-2 text-sm text-red-600 hover:text-red-700"
                         >
-                          Remove
+                          {isZh ? "移除" : "Remove"}
                         </button>
                       </div>
                     </div>
@@ -195,7 +197,7 @@ function PalettePanel({
                     onClick={() => handleRemoveFromPalette(plant.id)}
                     className="mt-2 text-sm text-red-600 hover:text-red-700"
                   >
-                    Remove
+                    {isZh ? "移除" : "Remove"}
                   </button>
                 </div>
               </div>
@@ -214,7 +216,7 @@ function PalettePanel({
         onClick={handleGenerateBoard}
         disabled={selectedPlants.length === 0}
         className="mt-6 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black">
-        Generate Board
+        {isZh ? "生成看板" : "Generate Board"}
       </button>
     </aside>
   );

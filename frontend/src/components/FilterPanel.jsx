@@ -1,4 +1,5 @@
 function FilterPanel({
+  language,
   selectedHoa,
   setSelectedHoa,
   filters,
@@ -13,17 +14,18 @@ function FilterPanel({
   foliageTypeOptions,
   formatLabel,
 }) {
+  const isZh = language === "zh";
   const isBotanicalSearch = filters.searchField === "botanical";
 
   return (
     /* Left Panel */
     <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-3">
-            <h2 className="text-lg font-semibold">Filters</h2>
+            <h2 className="text-lg font-semibold">{isZh ? "筛选条件" : "Filters"}</h2>
 
             <div className="mt-4 space-y-4">
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Search In
+                        {isZh ? "搜索字段" : "Search In"}
                     </label>
                     <div className="space-y-2 rounded-lg bg-gray-50 p-2">
                         <label
@@ -37,7 +39,7 @@ function FilterPanel({
                                     filters.searchField === "common" ? "bg-gray-700" : "bg-transparent"
                                 }`} />
                             </span>
-                            <span>Common Name</span>
+                            <span>{isZh ? "常用名" : "Common Name"}</span>
                         </label>
 
                         <label
@@ -51,19 +53,19 @@ function FilterPanel({
                                     filters.searchField === "botanical" ? "bg-gray-700" : "bg-transparent"
                                 }`} />
                             </span>
-                            <span>Botanical Name</span>
+                            <span>{isZh ? "学名" : "Botanical Name"}</span>
                         </label>
                     </div>
                 </div>
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Search
+                        {isZh ? "搜索" : "Search"}
                     </label>
                     <input
                         type="text"
                         value={filters.searchText}
                         onChange={(e) => handleFilterChange("searchText", e.target.value)}
-                        placeholder={isBotanicalSearch ? "Search botanical name..." : "Search common name..."}
+                        placeholder={isBotanicalSearch ? (isZh ? "搜索学名..." : "Search botanical name...") : (isZh ? "搜索常用名..." : "Search common name...")}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                     />
                 </div>
@@ -75,7 +77,7 @@ function FilterPanel({
                         value={selectedHoa}
                         onChange={(e) => setSelectedHoa(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">All Communities</option>
+                        <option value="">{isZh ? "所有社区" : "All Communities"}</option>
                         {hoaOptions.map((hoa) => (
                             <option key={hoa} value={hoa}>
                                 {hoa}
@@ -86,13 +88,13 @@ function FilterPanel({
 
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Plant Type
+                        {isZh ? "植物类型" : "Plant Type"}
                     </label>
                     <select
                         value={filters.plantType}
                         onChange={(e) => handleFilterChange("plantType", e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">All Types</option>
+                        <option value="">{isZh ? "所有类型" : "All Types"}</option>
                         {plantTypeOptions.map((type) => (
                             <option key={type} value={type}>
                                 {formatLabel(type)}
@@ -103,13 +105,13 @@ function FilterPanel({
 
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Flower Color
+                        {isZh ? "花色" : "Flower Color"}
                     </label>
                     <select
                         value={filters.flowerColor}
                         onChange={(e) => handleFilterChange("flowerColor", e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">All Colors</option>
+                        <option value="">{isZh ? "所有颜色" : "All Colors"}</option>
                         {flowerColorOptions.map((color) => (
                             <option key={color} value={color}>
                                 {formatLabel(color)}
@@ -120,13 +122,13 @@ function FilterPanel({
 
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Bloom Season
+                        {isZh ? "花期" : "Bloom Season"}
                     </label>
                     <select
                         value={filters.bloomSeason}
                         onChange={(e) => handleFilterChange("bloomSeason", e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">All Seasons</option>
+                        <option value="">{isZh ? "所有季节" : "All Seasons"}</option>
                         {bloomSeasonOptions.map((season) => (
                             <option key={season} value={season}>
                                 {formatLabel(season)}
@@ -137,13 +139,13 @@ function FilterPanel({
 
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Sun Exposure
+                        {isZh ? "日照需求" : "Sun Exposure"}
                     </label>
                     <select
                         value={filters.sunExposure}
                         onChange={(e) => handleFilterChange("sunExposure", e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">All Sun Levels</option>
+                        <option value="">{isZh ? "所有日照等级" : "All Sun Levels"}</option>
                         {sunExposureOptions.map((sun) => (
                             <option key={sun} value={sun}>
                                 {formatLabel(sun)}
@@ -154,13 +156,13 @@ function FilterPanel({
 
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Shade
+                        {isZh ? "耐阴程度" : "Shade"}
                     </label>
                     <select
                         value={filters.shade}
                         onChange={(e) => handleFilterChange("shade", e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">All Shade Levels</option>
+                        <option value="">{isZh ? "所有耐阴等级" : "All Shade Levels"}</option>
                         {shadeOptions.map((shade) => (
                             <option key={shade} value={shade}>
                                 {formatLabel(shade)}
@@ -171,13 +173,13 @@ function FilterPanel({
 
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Leaf Color
+                        {isZh ? "叶色" : "Leaf Color"}
                     </label>
                     <select
                         value={filters.leafColor}
                         onChange={(e) => handleFilterChange("leafColor", e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">All Leaf Colors</option>
+                        <option value="">{isZh ? "所有叶色" : "All Leaf Colors"}</option>
                         {leafColorOptions.map((leafColor) => (
                             <option key={leafColor} value={leafColor}>
                                 {formatLabel(leafColor)}
@@ -188,13 +190,13 @@ function FilterPanel({
 
                 <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Foliage Type
+                        {isZh ? "常绿/落叶" : "Foliage Type"}
                     </label>
                     <select
                         value={filters.foliageType}
                         onChange={(e) => handleFilterChange("foliageType", e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">All Types</option>
+                        <option value="">{isZh ? "所有类型" : "All Types"}</option>
                         {foliageTypeOptions.map((foliageType) => (
                             <option key={foliageType} value={foliageType}>
                                 {formatLabel(foliageType)}

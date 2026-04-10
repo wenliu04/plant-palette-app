@@ -1,9 +1,11 @@
 function ResultsPanel({
+  language,
   loading,
   filteredPlants,
   handleAddToPalette,
   formatLabel,
 }) {
+    const isZh = language === "zh";
     //根据 bloom season 返回对应的标签颜色
     // Return corresponding tag color based on bloom season
     const getSeasonTagClass = (season) => {
@@ -23,14 +25,14 @@ function ResultsPanel({
   return (
     <main className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-5">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Plant Results</h2>
+        <h2 className="text-lg font-semibold">{isZh ? "植物结果" : "Plant Results"}</h2>
         <p className="text-sm text-gray-500">
-          {loading ? "Loading..." : `${filteredPlants.length} plants`}
+          {loading ? (isZh ? "加载中..." : "Loading...") : `${filteredPlants.length} ${isZh ? "种植物" : "plants"}`}
         </p>
       </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading plant results...</p>
+        <p className="text-gray-500">{isZh ? "正在加载植物结果..." : "Loading plant results..."}</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {filteredPlants.map((plant) => (
@@ -52,9 +54,9 @@ function ResultsPanel({
                 </p>
 
                 <div className="mt-3 space-y-1 text-sm text-gray-700">
-                  <p>Type: {formatLabel(plant.plant_type)}</p>
-                  <p>Flower Color: {formatLabel(plant.flower_color)}</p>
-                  <p>Height: {plant.height}</p>  
+                  <p>{isZh ? "类型" : "Type"}: {formatLabel(plant.plant_type)}</p>
+                  <p>{isZh ? "花色" : "Flower Color"}: {formatLabel(plant.flower_color)}</p>
+                  <p>{isZh ? "高度" : "Height"}: {plant.height}</p>  
                 </div>
                 
                  {/* Bloom season tags / 花期标签 */}
@@ -74,7 +76,7 @@ function ResultsPanel({
                   onClick={() => handleAddToPalette(plant)}
                   className="mt-4 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
                 >
-                  Add to Palette
+                  {isZh ? "加入 Palette" : "Add to Palette"}
                 </button>
               </div>
             </div>
