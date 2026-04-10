@@ -3,7 +3,7 @@ import FilterPanel from "./components/FilterPanel";
 import ResultsPanel from "./components/ResultsPanel";
 import PalettePanel from "./components/PalettePanel";
 
-const CHANGELOG_VERSION = "v2.2";
+const CHANGELOG_VERSION = "v2.3";
 const CHANGELOG_RELEASE_DATE = "April 10, 2026";
 
 const API_BASE = (
@@ -515,13 +515,25 @@ function App() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900">Version 2</h3>
+                <h3 className="font-semibold text-gray-900">Version 2.0</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
                   <li>Import plant list (.txt/.csv/.json) in Palette panel</li>
+                  <li>Remove All action in Palette panel</li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Version 2.1</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
                   <li>Group-by-Type toggle in Palette and Palette Board</li>
                   <li>Drag-and-drop reorder and sorting in Palette Board</li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Version 2.2</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
                   <li>Wider responsive 3-panel layout for ultra-wide screens</li>
-                  <li>Remove All action in Palette panel</li>
                   <li>Changelog popup now supports Do-not-show-again preference</li>
                 </ul>
               </div>
@@ -544,7 +556,7 @@ function App() {
         <header className="mb-6">
           <h1 className="text-3xl font-bold">Plant Palette Tool</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Version 2 – Smart Search / Import / Grouping / Drag & Sort
+            Version 2.2 – Smart Search / Import / Grouping / Drag & Sort
           </p>
         </header>
 
