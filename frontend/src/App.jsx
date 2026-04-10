@@ -490,9 +490,9 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       {showChangelog ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+          <div className="mx-auto w-full max-w-2xl rounded-2xl bg-white p-4 shadow-xl sm:mt-8 sm:p-6">
+            <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex items-start justify-between gap-4 border-b border-gray-100 bg-white px-4 py-3 sm:-mx-6 sm:-mt-6 sm:px-6">
               <div>
                 <h2 className="text-xl font-semibold">What&apos;s New</h2>
                 <p className="mt-1 text-sm text-gray-500">
@@ -507,7 +507,7 @@ function App() {
               </button>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1 sm:max-h-[72vh]">
               <div className="rounded-xl border border-gray-200 p-4">
                 <h3 className="font-semibold text-gray-900">Version 1</h3>
                 <p className="mt-2 text-sm text-gray-700">
@@ -557,7 +557,7 @@ function App() {
               </div>
             </div>
 
-            <label className="mt-5 inline-flex items-center gap-2 text-sm text-gray-700">
+            <label className="mt-4 inline-flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
                 checked={dontShowAgain}
