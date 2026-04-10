@@ -7,6 +7,9 @@ function FilterPanel({
   plantTypeOptions,
   flowerColorOptions,
   bloomSeasonOptions,
+  shadeOptions,
+  leafColorOptions,
+  foliageTypeOptions,
   formatLabel,
 }) {
   const isBotanicalSearch = filters.searchField === "botanical";
@@ -129,7 +132,58 @@ function FilterPanel({
                             </option>
                         ))}
                     </select>
-                </div>             
+                </div>
+
+                <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Shade
+                    </label>
+                    <select
+                        value={filters.shade}
+                        onChange={(e) => handleFilterChange("shade", e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        <option value="">All Shade Levels</option>
+                        {shadeOptions.map((shade) => (
+                            <option key={shade} value={shade}>
+                                {formatLabel(shade)}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Leaf Color
+                    </label>
+                    <select
+                        value={filters.leafColor}
+                        onChange={(e) => handleFilterChange("leafColor", e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        <option value="">All Leaf Colors</option>
+                        {leafColorOptions.map((leafColor) => (
+                            <option key={leafColor} value={leafColor}>
+                                {formatLabel(leafColor)}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Foliage Type
+                    </label>
+                    <select
+                        value={filters.foliageType}
+                        onChange={(e) => handleFilterChange("foliageType", e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        <option value="">All Types</option>
+                        {foliageTypeOptions.map((foliageType) => (
+                            <option key={foliageType} value={foliageType}>
+                                {formatLabel(foliageType)}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
           </aside>
     );

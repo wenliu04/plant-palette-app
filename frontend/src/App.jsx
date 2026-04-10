@@ -3,7 +3,7 @@ import FilterPanel from "./components/FilterPanel";
 import ResultsPanel from "./components/ResultsPanel";
 import PalettePanel from "./components/PalettePanel";
 
-const CHANGELOG_VERSION = "v2";
+const CHANGELOG_VERSION = "v2.2";
 const CHANGELOG_RELEASE_DATE = "April 10, 2026";
 
 const API_BASE = (
@@ -159,6 +159,9 @@ function App() {
     plantType: "",
     flowerColor: "",
     bloomSeason: "",
+    shade: "",
+    leafColor: "",
+    foliageType: "",
   });
   const [importStatus, setImportStatus] = useState("");
   // 页面加载时从后端获取植物数据和 HOA 数据
@@ -352,6 +355,21 @@ function App() {
       .filter(Boolean))];
   }, [plants]);
 
+  // 动态生成 Shade 下拉选项
+  const shadeOptions = useMemo(() => {
+    return [...new Set(plants.map((plant) => plant.shade_tolerance).filter(Boolean))];
+  }, [plants]);
+
+  // 动态生成 Leaf Color 下拉选项
+  const leafColorOptions = useMemo(() => {
+    return [...new Set(plants.map((plant) => plant.leaf_color).filter(Boolean))];
+  }, [plants]);
+
+  // 动态生成 Foliage Type 下拉选项（Evergreen / Deciduous）
+  const foliageTypeOptions = useMemo(() => {
+    return [...new Set(plants.map((plant) => plant.foliage_type).filter(Boolean))];
+  }, [plants]);
+
   // 当前选中的 HOA 对象
   const selectedHoaObj = useMemo(() => {
     return hoaLists.find((hoaList) => hoaList.name === selectedHoa) || null;
@@ -395,9 +413,27 @@ function App() {
         !filters.bloomSeason ||
          (plant.bloom_season || []).includes(filters.bloomSeason);
 
+      const matchesShade =
+        !filters.shade || plant.shade_tolerance === filters.shade;
+
+      const matchesLeafColor =
+        !filters.leafColor || plant.leaf_color === filters.leafColor;
+
+      const matchesFoliageType =
+        !filters.foliageType || plant.foliage_type === filters.foliageType;
+
       // 所有条件都满足才显示
       // Plant must satisfy all active filters
-      return matchesSearch && matchesHoa && matchesType && matchesColor && matchesBloom;
+      return (
+        matchesSearch &&
+        matchesHoa &&
+        matchesType &&
+        matchesColor &&
+        matchesBloom &&
+        matchesShade &&
+        matchesLeafColor &&
+        matchesFoliageType
+      );
     });
   }, [plants,selectedHoaObj,filters]);
 
@@ -442,14 +478,22 @@ function App() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Version 1.1</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  <li>New advanced filters: Shade, Leaf Color, Foliage Type</li>
+                  <li>Smart search with Common/Botanical toggle</li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
                 <h3 className="font-semibold text-gray-900">Version 2</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
-                  <li>Smart search with Common/Botanical toggle</li>
                   <li>Import plant list (.txt/.csv/.json) in Palette panel</li>
                   <li>Group-by-Type toggle in Palette and Palette Board</li>
                   <li>Drag-and-drop reorder and sorting in Palette Board</li>
                   <li>Wider responsive 3-panel layout for ultra-wide screens</li>
                   <li>Remove All action in Palette panel</li>
+                  <li>Changelog popup now supports Do-not-show-again preference</li>
                 </ul>
               </div>
             </div>
@@ -485,6 +529,9 @@ function App() {
           plantTypeOptions={plantTypeOptions}
           flowerColorOptions={flowerColorOptions}
           bloomSeasonOptions={bloomSeasonOptions}
+          shadeOptions={shadeOptions}
+          leafColorOptions={leafColorOptions}
+          foliageTypeOptions={foliageTypeOptions}
           formatLabel={formatLabel}
         />
         <ResultsPanel
