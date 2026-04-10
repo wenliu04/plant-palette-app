@@ -7,6 +7,7 @@ function FilterPanel({
   plantTypeOptions,
   flowerColorOptions,
   bloomSeasonOptions,
+  sunExposureOptions,
   shadeOptions,
   leafColorOptions,
   foliageTypeOptions,
@@ -129,6 +130,23 @@ function FilterPanel({
                         {bloomSeasonOptions.map((season) => (
                             <option key={season} value={season}>
                                 {formatLabel(season)}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Sun Exposure
+                    </label>
+                    <select
+                        value={filters.sunExposure}
+                        onChange={(e) => handleFilterChange("sunExposure", e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        <option value="">All Sun Levels</option>
+                        {sunExposureOptions.map((sun) => (
+                            <option key={sun} value={sun}>
+                                {formatLabel(sun)}
                             </option>
                         ))}
                     </select>

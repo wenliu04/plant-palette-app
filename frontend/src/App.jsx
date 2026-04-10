@@ -33,6 +33,9 @@ const normalizeText = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const normalizeEnumValue = (value) =>
+  (value || "").toLowerCase().replace(/\s+/g, "_").trim();
+
 const isSubsequence = (query, target) => {
   let i = 0;
   let j = 0;
@@ -159,6 +162,7 @@ function App() {
     plantType: "",
     flowerColor: "",
     bloomSeason: "",
+    sunExposure: "",
     shade: "",
     leafColor: "",
     foliageType: "",
@@ -355,9 +359,26 @@ function App() {
       .filter(Boolean))];
   }, [plants]);
 
+  // 动态生成 Sun Exposure 下拉选项
+  const sunExposureOptions = useMemo(() => {
+    return [
+      ...new Set(
+        plants
+          .map((plant) => normalizeEnumValue(plant.sun_exposure))
+          .filter(Boolean)
+      ),
+    ];
+  }, [plants]);
+
   // 动态生成 Shade 下拉选项
   const shadeOptions = useMemo(() => {
-    return [...new Set(plants.map((plant) => plant.shade_tolerance).filter(Boolean))];
+    return [
+      ...new Set(
+        plants
+          .map((plant) => normalizeEnumValue(plant.shade_tolerance))
+          .filter(Boolean)
+      ),
+    ];
   }, [plants]);
 
   // 动态生成 Leaf Color 下拉选项
@@ -413,14 +434,21 @@ function App() {
         !filters.bloomSeason ||
          (plant.bloom_season || []).includes(filters.bloomSeason);
 
+      const matchesSunExposure =
+        !filters.sunExposure ||
+        normalizeEnumValue(plant.sun_exposure) === normalizeEnumValue(filters.sunExposure);
+
       const matchesShade =
-        !filters.shade || plant.shade_tolerance === filters.shade;
+        !filters.shade ||
+        normalizeEnumValue(plant.shade_tolerance) === normalizeEnumValue(filters.shade);
 
       const matchesLeafColor =
-        !filters.leafColor || plant.leaf_color === filters.leafColor;
+        !filters.leafColor ||
+        normalizeEnumValue(plant.leaf_color) === normalizeEnumValue(filters.leafColor);
 
       const matchesFoliageType =
-        !filters.foliageType || plant.foliage_type === filters.foliageType;
+        !filters.foliageType ||
+        normalizeEnumValue(plant.foliage_type) === normalizeEnumValue(filters.foliageType);
 
       // 所有条件都满足才显示
       // Plant must satisfy all active filters
@@ -430,6 +458,7 @@ function App() {
         matchesType &&
         matchesColor &&
         matchesBloom &&
+        matchesSunExposure &&
         matchesShade &&
         matchesLeafColor &&
         matchesFoliageType
@@ -529,6 +558,7 @@ function App() {
           plantTypeOptions={plantTypeOptions}
           flowerColorOptions={flowerColorOptions}
           bloomSeasonOptions={bloomSeasonOptions}
+          sunExposureOptions={sunExposureOptions}
           shadeOptions={shadeOptions}
           leafColorOptions={leafColorOptions}
           foliageTypeOptions={foliageTypeOptions}
