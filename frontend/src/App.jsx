@@ -3,7 +3,9 @@ import FilterPanel from "./components/FilterPanel";
 import ResultsPanel from "./components/ResultsPanel";
 import PalettePanel from "./components/PalettePanel";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+).replace(/\/$/, "");
 const API_ORIGIN = (() => {
   try {
     return new URL(API_BASE).origin;
@@ -19,6 +21,102 @@ const resolveImageUrl = (url, apiOrigin = API_ORIGIN) => {
     return `${apiOrigin}${url}`;
   }
   return url;
+};
+
+const normalizeText = (value) =>
+  (value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const isSubsequence = (query, target) => {
+  let i = 0;
+  let j = 0;
+  while (i < query.length && j < target.length) {
+    if (query[i] === target[j]) i += 1;
+    j += 1;
+  }
+  return i === query.length;
+};
+
+const editDistance = (a, b) => {
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i += 1) dp[i][0] = i;
+  for (let j = 0; j <= n; j += 1) dp[0][j] = j;
+  for (let i = 1; i <= m; i += 1) {
+    for (let j = 1; j <= n; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return dp[m][n];
+};
+
+const fuzzyMatch = (query, rawCandidates) => {
+  const q = normalizeText(query);
+  if (!q) return true;
+  const firstChar = q[0];
+
+  return rawCandidates.some((candidate) => {
+    const text = normalizeText(candidate);
+    if (!text) return false;
+    const words = text.split(" ").filter(Boolean);
+
+    // Require first-letter alignment before fuzzy matching.
+    // At least one word in the candidate must start with the same first letter.
+    const startsWithSameFirstLetter =
+      words.some((word) => word[0] === firstChar) || text[0] === firstChar;
+    if (!startsWithSameFirstLetter) return false;
+
+    if (text.includes(q) || text.startsWith(q)) return true;
+    if (q.length >= 2 && isSubsequence(q, text)) return true;
+    return words.some((word) => {
+      if (!word) return false;
+      if (word.includes(q) || word.startsWith(q)) return true;
+      const maxDistance = q.length <= 4 ? 1 : 2;
+      return editDistance(q, word) <= maxDistance;
+    });
+  });
+};
+
+const parseImportedPlantNames = (text) => {
+  const raw = (text || "").trim();
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if (item && typeof item === "object") {
+            return (
+              item.common_name ||
+              item.botanical_name ||
+              item.name ||
+              item.plant ||
+              ""
+            );
+          }
+          return "";
+        })
+        .filter(Boolean);
+    }
+  } catch {
+    // Not JSON, fall through to text/csv parsing.
+  }
+
+  return raw
+    .split(/[\n,;\t]+/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
 };
 
 function App() {
@@ -51,10 +149,13 @@ function App() {
 
   // 当前筛选条件 / Current filter values
   const [filters, setFilters] = useState({
+    searchField: "common",
+    searchText: "",
     plantType: "",
     flowerColor: "",
     bloomSeason: "",
   });
+  const [importStatus, setImportStatus] = useState("");
   // 页面加载时从后端获取植物数据和 HOA 数据
   // Fetch plant data + HOA data from backend when page first loads
   useEffect(() => {
@@ -118,6 +219,77 @@ function App() {
     return updated;
   });
 };
+
+  // 清空整个 palette
+  // Remove all plants from the palette
+  const handleRemoveAllFromPalette = () => {
+    setSelectedPlants([]);
+    localStorage.setItem("paletteBoard", JSON.stringify([]));
+  };
+
+  // 从导入文件中批量加入 palette（按 common/botanical 名称匹配）
+  const handleImportPlantFile = async (file) => {
+    if (!file) return;
+
+    try {
+      const content = await file.text();
+      const names = parseImportedPlantNames(content);
+
+      if (!names.length) {
+        setImportStatus("No valid plant names found in file.");
+        return;
+      }
+
+      if (!plants.length) {
+        setImportStatus("Plant catalog is not loaded yet. Please try again.");
+        return;
+      }
+
+      const byCommon = new Map();
+      const byBotanical = new Map();
+      plants.forEach((plant) => {
+        byCommon.set(normalizeText(plant.common_name), plant);
+        byBotanical.set(normalizeText(plant.botanical_name), plant);
+      });
+
+      const matched = [];
+      const unmatched = [];
+      names.forEach((name) => {
+        const key = normalizeText(name);
+        if (!key) return;
+        const found = byCommon.get(key) || byBotanical.get(key);
+        if (found) matched.push(found);
+        else unmatched.push(name);
+      });
+
+      if (!matched.length) {
+        setImportStatus(
+          `Imported 0 plants. ${unmatched.length} unmatched names (check spelling).`
+        );
+        return;
+      }
+
+      setSelectedPlants((prev) => {
+        const updated = [...prev];
+        const existingIds = new Set(prev.map((plant) => plant.id));
+        matched.forEach((plant) => {
+          if (!existingIds.has(plant.id)) {
+            updated.push(plant);
+            existingIds.add(plant.id);
+          }
+        });
+        localStorage.setItem("paletteBoard", JSON.stringify(updated));
+        return updated;
+      });
+
+      setImportStatus(
+        `Imported ${matched.length} matched names. ${unmatched.length} unmatched.`
+      );
+    } catch (error) {
+      console.error("Import failed:", error);
+      setImportStatus("Import failed. Please use .txt, .csv or .json file.");
+    }
+  };
   // 更新某一个筛选条件
   // Update one specific filter field
    const handleFilterChange = (field, value) => {
@@ -173,6 +345,13 @@ function App() {
       // HOA 精确匹配；如果用户选了 HOA，就看这个植物的 ID 是否在对应 HOA 的 approvedPlantIds 里
       // Exact HOA match: if user selected an HOA, check if plant ID is in that HOA's approvedPlantIds
       const plantName = plant.common_name || plant.commonName || "";
+      const botanicalName = plant.botanical_name || "";
+      const searchText = filters.searchText || "";
+      const searchCandidates =
+        filters.searchField === "botanical"
+          ? [botanicalName]
+          : [plantName];
+      const matchesSearch = fuzzyMatch(searchText, searchCandidates);
       const matchesHoa = selectedHoaObj
         ? selectedHoaObj.approvedPlantNames.includes(plantName)
         : true;
@@ -199,7 +378,7 @@ function App() {
 
       // 所有条件都满足才显示
       // Plant must satisfy all active filters
-      return matchesHoa && matchesType && matchesColor && matchesBloom;
+      return matchesSearch && matchesHoa && matchesType && matchesColor && matchesBloom;
     });
   }, [plants,selectedHoaObj,filters]);
 
@@ -216,7 +395,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      <div className="mx-auto max-w-7xl p-6">
+      <div className="mx-auto w-full max-w-[2200px] px-4 py-6 sm:px-6 xl:px-8 2xl:px-10">
         <header className="mb-6">
           <h1 className="text-3xl font-bold">Plant Palette Tool</h1>
           <p className="mt-2 text-sm text-gray-600">
@@ -224,7 +403,7 @@ function App() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 2xl:gap-8">
           <FilterPanel
           selectedHoa={selectedHoa}
           setSelectedHoa={setSelectedHoa}
@@ -246,6 +425,9 @@ function App() {
         <PalettePanel
           selectedPlants={selectedPlants}
           handleRemoveFromPalette={handleRemoveFromPalette}
+          handleRemoveAllFromPalette={handleRemoveAllFromPalette}
+          handleImportPlantFile={handleImportPlantFile}
+          importStatus={importStatus}
         />
         </div>
       </div>

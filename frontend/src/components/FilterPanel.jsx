@@ -9,12 +9,60 @@ function FilterPanel({
   bloomSeasonOptions,
   formatLabel,
 }) {
+  const isBotanicalSearch = filters.searchField === "botanical";
+
   return (
     /* Left Panel */
     <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-3">
             <h2 className="text-lg font-semibold">Filters</h2>
 
             <div className="mt-4 space-y-4">
+                <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Search In
+                    </label>
+                    <div className="space-y-2 rounded-lg bg-gray-50 p-2">
+                        <label
+                            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 hover:bg-white"
+                            onClick={() => handleFilterChange("searchField", "common")}
+                        >
+                            <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full border ${
+                                filters.searchField === "common" ? "border-gray-700" : "border-gray-400"
+                            }`}>
+                                <span className={`h-2 w-2 rounded-full ${
+                                    filters.searchField === "common" ? "bg-gray-700" : "bg-transparent"
+                                }`} />
+                            </span>
+                            <span>Common Name</span>
+                        </label>
+
+                        <label
+                            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 hover:bg-white"
+                            onClick={() => handleFilterChange("searchField", "botanical")}
+                        >
+                            <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full border ${
+                                filters.searchField === "botanical" ? "border-gray-700" : "border-gray-400"
+                            }`}>
+                                <span className={`h-2 w-2 rounded-full ${
+                                    filters.searchField === "botanical" ? "bg-gray-700" : "bg-transparent"
+                                }`} />
+                            </span>
+                            <span>Botanical Name</span>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Search
+                    </label>
+                    <input
+                        type="text"
+                        value={filters.searchText}
+                        onChange={(e) => handleFilterChange("searchText", e.target.value)}
+                        placeholder={isBotanicalSearch ? "Search botanical name..." : "Search common name..."}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                </div>
                  <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
                         HOA

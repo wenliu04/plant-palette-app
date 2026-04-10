@@ -21,7 +21,7 @@ function ResultsPanel({
     }
   };
   return (
-    <main className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-6">
+    <main className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-5">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Plant Results</h2>
         <p className="text-sm text-gray-500">
@@ -41,7 +41,7 @@ function ResultsPanel({
               <img
                 src={plant.image_url}
                 alt={plant.common_name}
-                className="h-40 w-full object-cover"
+                className="aspect-square w-full object-cover"
               />
               <div className="p-4">
                 <h3 className="text-lg font-semibold">
