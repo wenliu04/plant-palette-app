@@ -3,6 +3,9 @@ import FilterPanel from "./components/FilterPanel";
 import ResultsPanel from "./components/ResultsPanel";
 import PalettePanel from "./components/PalettePanel";
 
+const CHANGELOG_VERSION = "v2";
+const CHANGELOG_RELEASE_DATE = "April 10, 2026";
+
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 ).replace(/\/$/, "");
@@ -125,6 +128,8 @@ function App() {
 
   // 页面加载状态 / Loading state for initial fetch
   const [loading, setLoading] = useState(true);
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // 用户加入 palette 的植物 / Plants selected by user for the palette
   const [selectedPlants, setSelectedPlants] = useState(() => {
@@ -159,6 +164,11 @@ function App() {
   // 页面加载时从后端获取植物数据和 HOA 数据
   // Fetch plant data + HOA data from backend when page first loads
   useEffect(() => {
+    const seenVersion = localStorage.getItem("changelogSeenVersion");
+    if (seenVersion !== CHANGELOG_VERSION) {
+      setShowChangelog(true);
+    }
+
     const fetchData = async () => {
       try {
         const [plantsRes, hoaRes] = await Promise.all([
@@ -196,6 +206,15 @@ function App() {
 
     fetchData();
   }, []);
+
+  const handleCloseChangelog = () => {
+    setShowChangelog(false);
+    if (dontShowAgain) {
+      localStorage.setItem("changelogSeenVersion", CHANGELOG_VERSION);
+    } else {
+      localStorage.removeItem("changelogSeenVersion");
+    }
+  };
 
 
   // 加入 palette，避免重复加入
@@ -395,11 +414,64 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
+      {showChangelog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">What&apos;s New</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Updated on {CHANGELOG_RELEASE_DATE}
+                </p>
+              </div>
+              <button
+                onClick={handleCloseChangelog}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Version 1</h3>
+                <p className="mt-2 text-sm text-gray-700">
+                  Basic 3-panel layout with filtering, plant results, and palette
+                  selection.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Version 2</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  <li>Smart search with Common/Botanical toggle</li>
+                  <li>Import plant list (.txt/.csv/.json) in Palette panel</li>
+                  <li>Group-by-Type toggle in Palette and Palette Board</li>
+                  <li>Drag-and-drop reorder and sorting in Palette Board</li>
+                  <li>Wider responsive 3-panel layout for ultra-wide screens</li>
+                  <li>Remove All action in Palette panel</li>
+                </ul>
+              </div>
+            </div>
+
+            <label className="mt-5 inline-flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={dontShowAgain}
+                onChange={(e) => setDontShowAgain(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-400"
+              />
+              Do not show this update again
+            </label>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mx-auto w-full max-w-[2200px] px-4 py-6 sm:px-6 xl:px-8 2xl:px-10">
         <header className="mb-6">
           <h1 className="text-3xl font-bold">Plant Palette Tool</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Version 1 – Filter / Results / Palette layout
+            Version 2 – Smart Search / Import / Grouping / Drag & Sort
           </p>
         </header>
 
