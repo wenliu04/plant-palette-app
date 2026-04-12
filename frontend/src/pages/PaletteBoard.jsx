@@ -367,6 +367,8 @@ function PaletteBoard() {
                           <img
                             src={resolveImageUrl(plant.image_url)}
                             alt={plant.common_name}
+                            loading="lazy"
+                            decoding="async"
                             className="mb-3 aspect-square w-full rounded-xl object-cover"
                             onError={(e) => {
                               e.currentTarget.onerror = null;
@@ -439,6 +441,8 @@ function PaletteBoard() {
                     <img
                       src={resolveImageUrl(plant.image_url)}
                       alt={plant.common_name}
+                      loading="lazy"
+                      decoding="async"
                       className="mb-3 aspect-square w-full rounded-xl object-cover"
                       onError={(e) => {
                         e.currentTarget.onerror = null;

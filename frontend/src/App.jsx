@@ -5,6 +5,8 @@ import PalettePanel from "./components/PalettePanel";
 
 const CHANGELOG_VERSION = "v2.3";
 const CHANGELOG_RELEASE_DATE = "April 10, 2026";
+const CACHE_KEY = "plantPaletteCacheV1";
+const CACHE_TTL_MS = 1000 * 60 * 30; // 30 minutes
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
@@ -181,6 +183,25 @@ function App() {
       setShowChangelog(true);
     }
 
+    // 1) Render cached data immediately for faster first paint after initial visit.
+    // 先读缓存，优先显示已有数据，减少首屏等待。
+    try {
+      const cachedRaw = localStorage.getItem(CACHE_KEY);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        const isFresh =
+          cached?.timestamp &&
+          Date.now() - Number(cached.timestamp) < CACHE_TTL_MS;
+        if (isFresh && Array.isArray(cached?.plants) && Array.isArray(cached?.hoas)) {
+          setPlants(cached.plants);
+          setHoaLists(cached.hoas);
+          setLoading(false);
+        }
+      }
+    } catch {
+      // Ignore cache parse errors.
+    }
+
     const fetchData = async () => {
       try {
         const [plantsRes, hoaRes] = await Promise.all([
@@ -209,6 +230,17 @@ function App() {
 
         setPlants(normalizedPlants);
         setHoaLists(hoaData);
+
+        // 2) Persist latest data for warm starts.
+        // 缓存最新数据，后续打开可秒开。
+        localStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            timestamp: Date.now(),
+            plants: normalizedPlants,
+            hoas: hoaData,
+          })
+        );
       } catch (err) {
         console.error("Error fetching data:", err);
       } finally {

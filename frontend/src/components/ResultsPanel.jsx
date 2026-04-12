@@ -43,6 +43,8 @@ function ResultsPanel({
               <img
                 src={plant.image_url}
                 alt={plant.common_name}
+                loading="lazy"
+                decoding="async"
                 className="aspect-square w-full object-cover"
               />
               <div className="p-4">

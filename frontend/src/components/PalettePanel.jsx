@@ -151,6 +151,8 @@ function PalettePanel({
                       <img
                         src={plant.image_url}
                         alt={plant.common_name}
+                        loading="lazy"
+                        decoding="async"
                         className="h-16 w-16 rounded-lg object-cover"
                       />
                       <div className="min-w-0 flex-1">
@@ -183,6 +185,8 @@ function PalettePanel({
                 <img
                   src={plant.image_url}
                   alt={plant.common_name}
+                  loading="lazy"
+                  decoding="async"
                   className="h-16 w-16 rounded-lg object-cover"
                 />
                 <div className="min-w-0 flex-1">
