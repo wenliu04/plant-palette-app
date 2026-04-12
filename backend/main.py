@@ -326,16 +326,29 @@ def get_plants(request: Request):
     base_url = str(request.base_url)
     normalized = []
     for plant in plants:
-        image_url = plant.get("image_url")
+        normalized_plant = {
+            **plant,
+            # Ensure advanced filter fields always exist in API payload.
+            "shade_tolerance": plant.get("shade_tolerance")
+            or plant.get("shadeTolerance")
+            or plant.get("shade")
+            or "",
+            "leaf_color": plant.get("leaf_color") or plant.get("leafColor") or "",
+            "foliage_type": plant.get("foliage_type")
+            or plant.get("foliageType")
+            or plant.get("evergreen_deciduous")
+            or "",
+        }
+        image_url = normalized_plant.get("image_url")
         if image_url and image_url.startswith("/"):
             normalized.append(
                 {
-                    **plant,
+                    **normalized_plant,
                     "image_url": urljoin(base_url, image_url.lstrip("/")),
                 }
             )
         else:
-            normalized.append(plant)
+            normalized.append(normalized_plant)
     return normalized
 @app.get("/hoas")
 def get_hoa_lists():
