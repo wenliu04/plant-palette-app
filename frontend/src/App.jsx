@@ -5,7 +5,7 @@ import PalettePanel from "./components/PalettePanel";
 
 const CHANGELOG_VERSION = "v2.3";
 const CHANGELOG_RELEASE_DATE = "April 10, 2026";
-const CACHE_KEY = "plantPaletteCacheV1";
+const CACHE_KEY = "plantPaletteCacheV2";
 const CACHE_TTL_MS = 1000 * 60 * 30; // 30 minutes
 
 const API_BASE = (
@@ -37,6 +37,26 @@ const normalizeText = (value) =>
 
 const normalizeEnumValue = (value) =>
   (value || "").toLowerCase().replace(/\s+/g, "_").trim();
+
+const getShadeValue = (plant) =>
+  normalizeEnumValue(
+    plant.shade_tolerance || plant.shadeTolerance || plant.shade || ""
+  );
+
+const getLeafColorValue = (plant) =>
+  normalizeEnumValue(plant.leaf_color || plant.leafColor || "");
+
+const getFoliageTypeValue = (plant) =>
+  normalizeEnumValue(
+    plant.foliage_type || plant.foliageType || plant.evergreen_deciduous || ""
+  );
+
+const hasAdvancedFilterFields = (items) =>
+  Array.isArray(items) &&
+  items.some(
+    (plant) =>
+      getShadeValue(plant) || getLeafColorValue(plant) || getFoliageTypeValue(plant)
+  );
 
 const isSubsequence = (query, target) => {
   let i = 0;
@@ -192,7 +212,12 @@ function App() {
         const isFresh =
           cached?.timestamp &&
           Date.now() - Number(cached.timestamp) < CACHE_TTL_MS;
-        if (isFresh && Array.isArray(cached?.plants) && Array.isArray(cached?.hoas)) {
+        if (
+          isFresh &&
+          Array.isArray(cached?.plants) &&
+          Array.isArray(cached?.hoas) &&
+          hasAdvancedFilterFields(cached.plants)
+        ) {
           setPlants(cached.plants);
           setHoaLists(cached.hoas);
           setLoading(false);
@@ -417,7 +442,7 @@ function App() {
     return [
       ...new Set(
         plants
-          .map((plant) => normalizeEnumValue(plant.shade_tolerance))
+          .map((plant) => getShadeValue(plant))
           .filter(Boolean)
       ),
     ];
@@ -425,12 +450,12 @@ function App() {
 
   // 动态生成 Leaf Color 下拉选项
   const leafColorOptions = useMemo(() => {
-    return [...new Set(plants.map((plant) => plant.leaf_color).filter(Boolean))];
+    return [...new Set(plants.map((plant) => getLeafColorValue(plant)).filter(Boolean))];
   }, [plants]);
 
   // 动态生成 Foliage Type 下拉选项（Evergreen / Deciduous）
   const foliageTypeOptions = useMemo(() => {
-    return [...new Set(plants.map((plant) => plant.foliage_type).filter(Boolean))];
+    return [...new Set(plants.map((plant) => getFoliageTypeValue(plant)).filter(Boolean))];
   }, [plants]);
 
   // 当前选中的 HOA 对象
@@ -481,16 +506,14 @@ function App() {
         normalizeEnumValue(plant.sun_exposure) === normalizeEnumValue(filters.sunExposure);
 
       const matchesShade =
-        !filters.shade ||
-        normalizeEnumValue(plant.shade_tolerance) === normalizeEnumValue(filters.shade);
+        !filters.shade || getShadeValue(plant) === normalizeEnumValue(filters.shade);
 
       const matchesLeafColor =
-        !filters.leafColor ||
-        normalizeEnumValue(plant.leaf_color) === normalizeEnumValue(filters.leafColor);
+        !filters.leafColor || getLeafColorValue(plant) === normalizeEnumValue(filters.leafColor);
 
       const matchesFoliageType =
         !filters.foliageType ||
-        normalizeEnumValue(plant.foliage_type) === normalizeEnumValue(filters.foliageType);
+        getFoliageTypeValue(plant) === normalizeEnumValue(filters.foliageType);
 
       // 所有条件都满足才显示
       // Plant must satisfy all active filters
