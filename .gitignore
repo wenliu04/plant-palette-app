@@ -17,3 +17,6 @@ build/
 
 # Env files
 .env
+# Env files (all levels)
+*.env
+**/.env

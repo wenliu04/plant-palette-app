@@ -2,9 +2,10 @@ import { useEffect, useMemo,useState } from "react";
 import FilterPanel from "./components/FilterPanel";
 import ResultsPanel from "./components/ResultsPanel";
 import PalettePanel from "./components/PalettePanel";
+import ChatAssistantPanel from "./components/ChatAssistantPanel";
 
-const CHANGELOG_VERSION = "v2.3";
-const CHANGELOG_RELEASE_DATE = "April 10, 2026";
+const CHANGELOG_VERSION = "v2.4";
+const CHANGELOG_RELEASE_DATE = "May 1, 2026";
 const CACHE_KEY = "plantPaletteCacheV2";
 const CACHE_TTL_MS = 1000 * 60 * 30; // 30 minutes
 
@@ -604,6 +605,16 @@ function App() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Version 2.4</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  <li>Added floating AI Plant Assistant chat window (minimize + size controls)</li>
+                  <li>Connected chat UI to backend `/chat` endpoint with real OpenAI responses</li>
+                  <li>Enabled tool-based plant recommendations with inline cards and Add-to-Palette actions</li>
+                  <li>Added backend agent debug logs for tool calls, filters, matches, and latency</li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
                 <h3 className="font-semibold text-gray-900">Version 2.3</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
                   <li>Language switcher in top-right: 🇺🇸 English / 🇨🇳 中文</li>
@@ -687,6 +698,11 @@ function App() {
           importStatus={importStatus}
         />
         </div>
+
+        <ChatAssistantPanel
+          language={language}
+          onAddToPalette={handleAddToPalette}
+        />
       </div>
     </div>
   );
