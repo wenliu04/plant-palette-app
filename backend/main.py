@@ -2,6 +2,7 @@ import os
 import json
 import time
 import logging
+import sqlite3
 from urllib.parse import urljoin
 from typing import Any
 
@@ -20,12 +21,19 @@ load_dotenv(BASE_DIR / ".env")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+DB_PATH = BASE_DIR / "plants.db"
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 logger = logging.getLogger("plant_agent")
+
+
+def get_conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 app = FastAPI()
 # Explicit CORS allowlist for local + Vercel deployments.
@@ -337,6 +345,95 @@ hoaLists = [
 ]
 
 
+def init_db() -> None:
+    with get_conn() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS plants (
+                id INTEGER PRIMARY KEY,
+                common_name TEXT NOT NULL,
+                botanical_name TEXT NOT NULL,
+                plant_type TEXT,
+                flower_color TEXT,
+                height TEXT,
+                sun_exposure TEXT,
+                shade_tolerance TEXT,
+                leaf_color TEXT,
+                foliage_type TEXT,
+                water_use TEXT,
+                bloom_season TEXT,
+                image_url TEXT
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS hoas (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS hoa_approved_plants (
+                hoa_id INTEGER NOT NULL,
+                plant_name TEXT NOT NULL,
+                PRIMARY KEY (hoa_id, plant_name),
+                FOREIGN KEY (hoa_id) REFERENCES hoas(id)
+            )
+            """
+        )
+
+        existing = conn.execute("SELECT COUNT(*) AS c FROM plants").fetchone()["c"]
+        if existing == 0:
+            conn.executemany(
+                """
+                INSERT INTO plants (
+                    id, common_name, botanical_name, plant_type, flower_color, height,
+                    sun_exposure, shade_tolerance, leaf_color, foliage_type, water_use,
+                    bloom_season, image_url
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        p["id"],
+                        p["common_name"],
+                        p["botanical_name"],
+                        p.get("plant_type"),
+                        p.get("flower_color"),
+                        p.get("height"),
+                        p.get("sun_exposure"),
+                        p.get("shade_tolerance"),
+                        p.get("leaf_color"),
+                        p.get("foliage_type"),
+                        p.get("water_use"),
+                        json.dumps(p.get("bloom_season", [])),
+                        p.get("image_url"),
+                    )
+                    for p in plants
+                ],
+            )
+
+        existing_hoas = conn.execute("SELECT COUNT(*) AS c FROM hoas").fetchone()["c"]
+        if existing_hoas == 0:
+            conn.executemany(
+                "INSERT INTO hoas (id, name) VALUES (?, ?)",
+                [(h["id"], h["name"]) for h in hoaLists],
+            )
+            links = []
+            for hoa in hoaLists:
+                for plant_name in hoa.get("approvedPlantNames", []):
+                    links.append((hoa["id"], plant_name))
+            conn.executemany(
+                "INSERT INTO hoa_approved_plants (hoa_id, plant_name) VALUES (?, ?)",
+                links,
+            )
+
+
+init_db()
+
+
 class ChatRequest(BaseModel):
     message: str
     language: str = "en"
@@ -370,17 +467,58 @@ def normalize_plant_for_response(plant: dict[str, Any], base_url: str) -> dict[s
     return normalized_plant
 
 
+def row_to_plant(row: sqlite3.Row) -> dict[str, Any]:
+    bloom = row["bloom_season"]
+    try:
+        bloom_season = json.loads(bloom) if bloom else []
+    except json.JSONDecodeError:
+        bloom_season = []
+    return {
+        "id": row["id"],
+        "common_name": row["common_name"],
+        "botanical_name": row["botanical_name"],
+        "plant_type": row["plant_type"] or "",
+        "flower_color": row["flower_color"] or "",
+        "height": row["height"] or "",
+        "sun_exposure": row["sun_exposure"] or "",
+        "shade_tolerance": row["shade_tolerance"] or "",
+        "leaf_color": row["leaf_color"] or "",
+        "foliage_type": row["foliage_type"] or "",
+        "water_use": row["water_use"] or "",
+        "bloom_season": bloom_season,
+        "image_url": row["image_url"] or "",
+    }
+
+
 def search_plants(filters: dict[str, Any], base_url: str) -> list[dict[str, Any]]:
     filtered = []
     hoa_name = (filters.get("hoa_name") or "").strip().lower()
-    selected_hoa = next((h for h in hoaLists if h["name"].lower() == hoa_name), None) if hoa_name else None
     limit = max(1, min(int(filters.get("limit", 5)), 10))
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM plants").fetchall()
+        approved_names = None
+        if hoa_name:
+            hoa_row = conn.execute(
+                "SELECT id FROM hoas WHERE LOWER(name) = LOWER(?)",
+                (hoa_name,),
+            ).fetchone()
+            if hoa_row:
+                approved_names = {
+                    r["plant_name"]
+                    for r in conn.execute(
+                        "SELECT plant_name FROM hoa_approved_plants WHERE hoa_id = ?",
+                        (hoa_row["id"],),
+                    ).fetchall()
+                }
+            else:
+                approved_names = set()
 
     logger.info("tool.search_plants filters=%s limit=%s", filters, limit)
 
-    for plant in plants:
+    for row in rows:
+        plant = row_to_plant(row)
         plant_name = plant.get("common_name", "")
-        if selected_hoa and plant_name not in selected_hoa.get("approvedPlantNames", []):
+        if approved_names is not None and plant_name not in approved_names:
             continue
 
         plant_type = (filters.get("plant_type") or "").strip().lower()
@@ -430,12 +568,29 @@ def read_root():
 def get_plants(request: Request):
     print(">>> /plants endpoint hit")
     base_url = str(request.base_url)
-    normalized = [normalize_plant_for_response(plant, base_url) for plant in plants]
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM plants ORDER BY id ASC").fetchall()
+    normalized = [normalize_plant_for_response(row_to_plant(row), base_url) for row in rows]
     return normalized
 @app.get("/hoas")
 def get_hoa_lists():
     print(">>> /hoas endpoint hit")
-    return hoaLists
+    with get_conn() as conn:
+        hoa_rows = conn.execute("SELECT id, name FROM hoas ORDER BY id ASC").fetchall()
+        results = []
+        for hoa in hoa_rows:
+            name_rows = conn.execute(
+                "SELECT plant_name FROM hoa_approved_plants WHERE hoa_id = ? ORDER BY plant_name ASC",
+                (hoa["id"],),
+            ).fetchall()
+            results.append(
+                {
+                    "id": hoa["id"],
+                    "name": hoa["name"],
+                    "approvedPlantNames": [r["plant_name"] for r in name_rows],
+                }
+            )
+    return results
 
 
 @app.post("/chat", response_model=ChatResponse)
