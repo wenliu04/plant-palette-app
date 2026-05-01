@@ -605,11 +605,10 @@ function App() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900">Version 2.5</h3>
+                <h3 className="font-semibold text-gray-900">Version 2.3</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
-                  <li>Added Bloom Timeline on Palette Board for month-by-month flowering comparison</li>
-                  <li>Improved PDF export workflow with Preview + Print/Save as PDF option</li>
-                  <li>Added local image URL migration and proxy-assisted image fetch for PDF embedding</li>
+                  <li>Language switcher in top-right: 🇺🇸 English / 🇨🇳 中文</li>
+                  <li>Homepage panels now support bilingual UI labels</li>
                 </ul>
               </div>
 
@@ -624,10 +623,11 @@ function App() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900">Version 2.3</h3>
+                <h3 className="font-semibold text-gray-900">Version 2.5</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
-                  <li>Language switcher in top-right: 🇺🇸 English / 🇨🇳 中文</li>
-                  <li>Homepage panels now support bilingual UI labels</li>
+                  <li>Added Bloom Timeline on Palette Board for month-by-month flowering comparison</li>
+                  <li>Improved PDF export workflow with Preview + Print/Save as PDF option</li>
+                  <li>Added local image URL migration and proxy-assisted image fetch for PDF embedding</li>
                 </ul>
               </div>
             </div>
