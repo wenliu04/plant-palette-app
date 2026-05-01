@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-const FALLBACK_IMAGE =
-  "https://via.placeholder.com/1000x1000?text=No+Image";
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 ).replace(/\/$/, "");
@@ -18,7 +15,18 @@ const API_ORIGIN = (() => {
 
 const resolveImageUrl = (url, apiOrigin = API_ORIGIN) => {
   if (!url) return url;
-  if (/^https?:\/\//i.test(url)) return url;
+  if (/^https?:\/\//i.test(url)) {
+    // Migrate stale localhost URLs from old localStorage data to current API origin.
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(url)) {
+      try {
+        const parsed = new URL(url);
+        return `${apiOrigin}${parsed.pathname}`;
+      } catch {
+        return url;
+      }
+    }
+    return url;
+  }
   if (url.startsWith("/")) {
     return `${apiOrigin}${url}`;
   }
@@ -26,6 +34,13 @@ const resolveImageUrl = (url, apiOrigin = API_ORIGIN) => {
 };
 
 const TYPE_ORDER = ["Tree", "Shrub", "Grass", "Groundcover", "Perennial", "Succulent", "Vine"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const SEASON_MONTHS = {
+  spring: [2, 3, 4],
+  summer: [5, 6, 7],
+  fall: [8, 9, 10],
+  winter: [11, 0, 1],
+};
 
 const formatTypeLabel = (value) => {
   if (!value) return "Other";
@@ -55,6 +70,56 @@ const groupPlantsByType = (plants) => {
   return groups;
 };
 
+const getBloomMonths = (plant) => {
+  const seasons = (plant?.bloom_season || [])
+    .map((season) => String(season).trim().toLowerCase())
+    .filter(Boolean);
+  const set = new Set();
+  seasons.forEach((season) => {
+    (SEASON_MONTHS[season] || []).forEach((month) => set.add(month));
+  });
+  return set;
+};
+
+const blobToDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
+const fetchImageDataUrl = async (url) => {
+  if (!url) return null;
+  try {
+    const resolvedUrl = resolveImageUrl(url);
+    let finalUrl = resolvedUrl;
+    if (import.meta.env.DEV) {
+      try {
+        const parsed = new URL(resolvedUrl);
+        if (
+          /^(localhost|127\.0\.0\.1)$/i.test(parsed.hostname) &&
+          parsed.pathname.startsWith("/static/")
+        ) {
+          finalUrl = `/api-static${parsed.pathname}`;
+        }
+      } catch {
+        // Keep original URL if parsing fails.
+      }
+    }
+    const response = await fetch(finalUrl, { mode: "cors" });
+    console.log("[PDF] image fetch", { finalUrl, status: response.status, ok: response.ok });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    console.log("[PDF] image blob", { finalUrl, size: blob.size, type: blob.type });
+    const dataUrl = await blobToDataUrl(blob);
+    return typeof dataUrl === "string" ? dataUrl : null;
+  } catch (error) {
+    console.error("[PDF] image fetch failed", { url, error });
+    return null;
+  }
+};
+
 function PaletteBoard() {
   // 存储当前 board 的植物列表
   // State to store plants in the palette board
@@ -76,12 +141,13 @@ function PaletteBoard() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setBoardPlants(
-          parsed.map((plant) => ({
-            ...plant,
-            image_url: resolveImageUrl(plant.image_url),
-          }))
-        );
+        const normalized = parsed.map((plant) => ({
+          ...plant,
+          image_url: resolveImageUrl(plant.image_url),
+        }));
+        setBoardPlants(normalized);
+        // Persist normalized URLs back to localStorage to avoid repeated stale-url issues.
+        localStorage.setItem("paletteBoard", JSON.stringify(normalized));
       } catch {
         setBoardPlants([]);
       }
@@ -145,102 +211,125 @@ function PaletteBoard() {
     navigate("/");
   };
 
+  const buildBoardPdf = async () => {
+    const pdf = new jsPDF("p", "mm", "a4");
+    let y = 14;
+
+    const ensureSpace = (needed = 10) => {
+      if (y + needed > 287) {
+        pdf.addPage();
+        y = 14;
+      }
+    };
+
+    pdf.setFontSize(18);
+    pdf.text("Palette Board", 14, y);
+    y += 8;
+    pdf.setFontSize(11);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Plants: ${boardPlants.length}`, 14, y);
+    pdf.setTextColor(0, 0, 0);
+    y += 8;
+
+    ensureSpace(16);
+    pdf.setFontSize(13);
+    pdf.text("Bloom Timeline", 14, y);
+    y += 6;
+
+    const left = 14;
+    const labelW = 42;
+    const monthW = 12;
+    const rowH = 6;
+
+    pdf.setFontSize(8);
+    MONTHS.forEach((m, i) => {
+      pdf.text(m, left + labelW + i * monthW + 2, y);
+    });
+    y += 4;
+
+    boardPlants.forEach((plant) => {
+      ensureSpace(rowH + 2);
+      const bloomMonths = getBloomMonths(plant);
+      pdf.setFontSize(8);
+      pdf.text(String(plant.common_name || "Unknown").slice(0, 22), left, y + 4);
+      for (let i = 0; i < 12; i += 1) {
+        const x = left + labelW + i * monthW;
+        const isBlooming = bloomMonths.has(i);
+        if (isBlooming) {
+          pdf.setFillColor(134, 239, 172);
+          pdf.rect(x, y, monthW - 1, rowH, "F");
+        } else {
+          pdf.setDrawColor(220, 220, 220);
+          pdf.rect(x, y, monthW - 1, rowH);
+        }
+      }
+      y += rowH + 2;
+    });
+
+    y += 4;
+    ensureSpace(10);
+    pdf.setFontSize(13);
+    pdf.text("Plant Details", 14, y);
+    y += 7;
+
+    pdf.setFontSize(12);
+    for (let index = 0; index < boardPlants.length; index += 1) {
+      const plant = boardPlants[index];
+      const cardH = 30;
+      ensureSpace(cardH + 4);
+      const imageDataUrl = await fetchImageDataUrl(plant.image_url);
+      const cardTop = y - 2;
+
+      pdf.setDrawColor(225, 225, 225);
+      pdf.roundedRect(14, cardTop, 182, cardH, 2, 2);
+
+      if (imageDataUrl) {
+        try {
+          const imageFormat = imageDataUrl.includes("image/png") ? "PNG" : "JPEG";
+          pdf.addImage(imageDataUrl, imageFormat, 18, y + 1, 24, 24);
+          console.log("[PDF] image embedded", { plant: plant.common_name, imageFormat });
+        } catch (error) {
+          console.error("[PDF] image embed failed", { plant: plant.common_name, error });
+          // Ignore image embed errors and continue with text.
+        }
+      } else {
+        console.warn("[PDF] image skipped (no data)", { plant: plant.common_name, url: plant.image_url });
+      }
+
+      const textX = 48;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.text(`${index + 1}. ${plant.common_name || "Unknown"}`, textX, y + 4);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9.5);
+      pdf.text(`Botanical: ${plant.botanical_name || "N/A"}`, textX, y + 10);
+      pdf.text(`Type: ${plant.plant_type || "N/A"} | Color: ${plant.flower_color || "N/A"}`, textX, y + 16);
+      pdf.text(`Height: ${plant.height || "N/A"} | Sun: ${plant.sun_exposure || "N/A"}`, textX, y + 22);
+      y += cardH + 4;
+    }
+
+    return pdf;
+  };
+
   // 导出 PDF
   // Export the palette board as a PDF
   const handleExportPDF = async () => {
-    try {
-      const boardElement = document.getElementById("palette-board-export");
+    const pdf = await buildBoardPdf();
+    pdf.save("palette-board.pdf");
+  };
 
-      // 如果找不到元素就直接退出
-      // Exit if export container not found
-      if (!boardElement) return;
+  const handlePreviewPDF = async () => {
+    const pdf = await buildBoardPdf();
+    const blobUrl = pdf.output("bloburl");
+    window.open(blobUrl, "_blank", "noopener,noreferrer");
+  };
 
-      // 将页面区域转为 canvas
-      // Convert DOM element into canvas
-      const canvas = await html2canvas(boardElement, {
-        scale: 2, // 提高清晰度 / improve sharpness
-        useCORS: true, // 尝试跨域图片加载 / try CORS image loading
-        backgroundColor: "#f9fafb",
-        scrollX: 0,
-        scrollY: -window.scrollY,
-        windowWidth: boardElement.scrollWidth,
-      });
-
-      // 转为图片数据
-      // Convert canvas to image
-      const imgData = canvas.toDataURL("image/png");
-
-      // 创建 PDF（A4尺寸）
-      // Create PDF document (A4)
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 10;
-      const contentWidth = pageWidth - margin * 2;
-      const contentHeight = pageHeight - margin * 2;
-
-      // 按比例计算渲染高度
-      // Compute proportional render height
-      const imgHeight = (canvas.height * contentWidth) / canvas.width;
-
-      // 支持多页：内容超过一页时自动分页
-      // Multi-page support: paginate when content exceeds one page
-      let heightLeft = imgHeight;
-      let positionY = margin;
-
-      pdf.addImage(imgData, "PNG", margin, positionY, contentWidth, imgHeight);
-      heightLeft -= contentHeight;
-
-      while (heightLeft > 0) {
-        positionY = heightLeft - imgHeight + margin;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", margin, positionY, contentWidth, imgHeight);
-        heightLeft -= contentHeight;
-      }
-
-      // 下载 PDF
-      // Save/download PDF
-      pdf.save("palette-board.pdf");
-    } catch (error) {
-      // 如果图片跨域导致截图失败，降级为文本 PDF，保证仍可导出。
-      // Fallback to a text-only PDF if screenshot export fails (e.g., CORS images).
-      console.error("PDF export failed, fallback to text PDF:", error);
-
-      const fallbackPdf = new jsPDF("p", "mm", "a4");
-      let y = 16;
-
-      fallbackPdf.setFontSize(16);
-      fallbackPdf.text("Palette Board", 14, y);
-      y += 10;
-
-      fallbackPdf.setFontSize(11);
-      fallbackPdf.text(`Plants: ${boardPlants.length}`, 14, y);
-      y += 8;
-
-      if (boardPlants.length === 0) {
-        fallbackPdf.text("No plants in board.", 14, y);
-      } else {
-        boardPlants.forEach((plant, index) => {
-          if (y > 280) {
-            fallbackPdf.addPage();
-            y = 16;
-          }
-          fallbackPdf.text(`${index + 1}. ${plant.common_name || "Unknown"}`, 14, y);
-          y += 6;
-          fallbackPdf.text(`   Botanical: ${plant.botanical_name || "N/A"}`, 14, y);
-          y += 6;
-          fallbackPdf.text(`   Type: ${plant.plant_type || "N/A"} | Color: ${plant.flower_color || "N/A"} | Height: ${plant.height || "N/A"}`, 14, y);
-          y += 8;
-        });
-      }
-
-      fallbackPdf.save("palette-board.txt-fallback.pdf");
-      window.alert("图片版 PDF 导出失败，已为你导出文字版 PDF（可能是图片跨域限制）。");
-    }
+  const handlePrintPdf = () => {
+    window.print();
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div id="palette-board-page" className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl">
 
         {/* 顶部工具栏 */}
@@ -251,7 +340,7 @@ function PaletteBoard() {
           {/* Back button */}
           <button
             onClick={handleBack}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-100"
+            className="no-print rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-100"
           >
             ← Back to Plant Selector
           </button>
@@ -275,14 +364,28 @@ function PaletteBoard() {
             <button
               onClick={handleExportPDF}
               disabled={boardPlants.length === 0}
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="no-print rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               Export PDF
+            </button>
+            <button
+              onClick={handlePreviewPDF}
+              disabled={boardPlants.length === 0}
+              className="no-print rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:bg-gray-100"
+            >
+              Preview PDF
+            </button>
+            <button
+              onClick={handlePrintPdf}
+              disabled={boardPlants.length === 0}
+              className="no-print rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
+            >
+              Print / Save as PDF
             </button>
           </div>
         </div>
 
-        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="no-print mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <label htmlFor="board-sort" className="text-sm text-gray-600">
@@ -319,6 +422,62 @@ function PaletteBoard() {
         {/* 导出区域（PDF截图区域） */}
         {/* Export area for PDF */}
         <div id="palette-board-export" className="space-y-6">
+          {boardPlants.length > 0 ? (
+            <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="mb-3">
+                <h2 className="text-lg font-semibold text-gray-900">Bloom Timeline</h2>
+                <p className="text-sm text-gray-500">
+                  Compare bloom periods across your selected plants.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <div className="min-w-[780px]">
+                  <div className="mb-1 grid grid-cols-[180px_repeat(12,minmax(0,1fr))] gap-1">
+                    <div className="px-2 text-xs font-medium text-gray-500">Plant</div>
+                    {MONTHS.map((month) => (
+                      <div
+                        key={month}
+                        className="rounded-md bg-gray-100 py-1 text-center text-xs font-medium text-gray-600"
+                      >
+                        {month}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-1">
+                    {boardPlants.map((plant) => {
+                      const bloomMonths = getBloomMonths(plant);
+                      return (
+                        <div
+                          key={`timeline-${plant.id}`}
+                          className="grid grid-cols-[180px_repeat(12,minmax(0,1fr))] gap-1"
+                        >
+                          <div className="truncate rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
+                            {plant.common_name}
+                          </div>
+                          {MONTHS.map((month, index) => {
+                            const isBlooming = bloomMonths.has(index);
+                            return (
+                              <div
+                                key={`${plant.id}-${month}`}
+                                className={`h-6 rounded-md border ${
+                                  isBlooming
+                                    ? "border-green-300 bg-green-200"
+                                    : "border-gray-200 bg-white"
+                                }`}
+                                title={isBlooming ? `${plant.common_name}: Blooming` : `${plant.common_name}: Not blooming`}
+                              />
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           {/* 空状态 */}
           {/* Empty state */}
@@ -371,8 +530,7 @@ function PaletteBoard() {
                             decoding="async"
                             className="mb-3 aspect-square w-full rounded-xl object-cover"
                             onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src = FALLBACK_IMAGE;
+                              e.currentTarget.style.display = "none";
                             }}
                           />
 
@@ -445,8 +603,7 @@ function PaletteBoard() {
                       decoding="async"
                       className="mb-3 aspect-square w-full rounded-xl object-cover"
                       onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = FALLBACK_IMAGE;
+                        e.currentTarget.style.display = "none";
                       }}
                     />
 

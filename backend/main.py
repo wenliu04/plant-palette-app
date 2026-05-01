@@ -3,11 +3,12 @@ import json
 import time
 import logging
 import sqlite3
+import re
 from urllib.parse import urljoin
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
@@ -54,6 +55,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def static_cors_header_fallback(request: Request, call_next):
+    response: Response = await call_next(request)
+    origin = request.headers.get("origin", "")
+    is_allowed_exact = origin in origins
+    is_allowed_localhost = bool(
+        re.match(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$", origin or "")
+    )
+    is_allowed_vercel = bool(re.match(r"^https://.*\.vercel\.app$", origin or ""))
+
+    if origin and (is_allowed_exact or is_allowed_localhost or is_allowed_vercel):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+    return response
 plants = [
     {
         "id": 1,

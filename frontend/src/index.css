@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  #palette-board-page {
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  #palette-board-export {
+    break-inside: auto;
+  }
+}

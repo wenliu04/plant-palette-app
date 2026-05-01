@@ -4,7 +4,7 @@ import ResultsPanel from "./components/ResultsPanel";
 import PalettePanel from "./components/PalettePanel";
 import ChatAssistantPanel from "./components/ChatAssistantPanel";
 
-const CHANGELOG_VERSION = "v2.4";
+const CHANGELOG_VERSION = "v2.5";
 const CHANGELOG_RELEASE_DATE = "May 1, 2026";
 const CACHE_KEY = "plantPaletteCacheV2";
 const CACHE_TTL_MS = 1000 * 60 * 30; // 30 minutes
@@ -605,6 +605,15 @@ function App() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Version 2.5</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  <li>Added Bloom Timeline on Palette Board for month-by-month flowering comparison</li>
+                  <li>Improved PDF export workflow with Preview + Print/Save as PDF option</li>
+                  <li>Added local image URL migration and proxy-assisted image fetch for PDF embedding</li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
                 <h3 className="font-semibold text-gray-900">Version 2.4</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
                   <li>Added floating AI Plant Assistant chat window (minimize + size controls)</li>
@@ -645,8 +654,8 @@ function App() {
               </h1>
               <p className="mt-2 text-sm text-gray-600">
                 {isZh
-                  ? "Version 2.3 – 智能搜索 / 导入 / 分组 / 拖拽排序 / 双语切换"
-                  : "Version 2.3 – Smart Search / Import / Grouping / Drag & Sort / Bilingual UI"}
+                  ? "Version 2.5 – AI 助手 / 花期时间轴 / PDF 预览与导出"
+                  : "Version 2.5 – AI Assistant / Bloom Timeline / PDF Preview & Export"}
               </p>
             </div>
 
